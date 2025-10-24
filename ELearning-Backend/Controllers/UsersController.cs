@@ -159,5 +159,24 @@ namespace ELearning.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPut("profile")]
+        public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateUserDto updateUserDto)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst("userId")?.Value ?? "0");
+                var user = await _userService.UpdateUserAsync(userId, updateUserDto);
+                return Ok(user);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

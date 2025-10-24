@@ -13,7 +13,13 @@ import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function ProtectedRoute({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  // Show loading or wait for authentication check to complete
+  if (loading) {
+    return <div>Loading...</div>; // You can replace this with a proper loading component
+  }
+  
   return user ? children : <Navigate to="/login" />;
 }
 

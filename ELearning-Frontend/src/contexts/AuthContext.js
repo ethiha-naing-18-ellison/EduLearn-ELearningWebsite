@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
@@ -16,17 +16,14 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      // Verify token and get user info
-      verifyToken();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
+  const logout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    delete axios.defaults.headers.common['Authorization'];
+  };
 
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     try {
       const response = await axios.post('http://localhost:5000/api/auth/validate-token', 
         JSON.stringify(token), 
@@ -50,7 +47,17 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Verify token and get user info
+      verifyToken();
+    } else {
+      setLoading(false);
+    }
+  }, [token, verifyToken]);
 
   const login = async (email, password) => {
     try {
@@ -93,13 +100,6 @@ export const AuthProvider = ({ children }) => {
         message: error.response?.data?.message || 'Registration failed' 
       };
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   const value = {
