@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import CreateCourse from './pages/CreateCourse';
+import EditCourse from './pages/EditCourse';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -48,6 +49,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CreateCourse />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/edit-course/:id" 
+              element={
+                <ProtectedRoute>
+                  <EditCourse />
                 </ProtectedRoute>
               } 
             />

@@ -345,7 +345,16 @@ const CourseDetail = () => {
             </CardContent>
             
             <CardActions sx={{ p: 2 }}>
-              {enrolled ? (
+              {user?.role === 'Instructor' || user?.role === 'Admin' ? (
+                <Button 
+                  variant="contained" 
+                  fullWidth 
+                  size="large"
+                  onClick={() => navigate(`/edit-course/${course.id}`)}
+                >
+                  Edit Course
+                </Button>
+              ) : enrolled ? (
                 <Button variant="contained" fullWidth size="large">
                   Continue Learning
                 </Button>

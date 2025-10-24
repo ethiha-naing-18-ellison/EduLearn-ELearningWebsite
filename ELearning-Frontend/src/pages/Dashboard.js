@@ -224,7 +224,7 @@ const Dashboard = () => {
                         <Button 
                           size="small" 
                           variant="outlined"
-                          onClick={() => navigate(`/course/${course.id}`)}
+                          onClick={() => navigate(`/courses/${course.id}`)}
                         >
                           View
                         </Button>
