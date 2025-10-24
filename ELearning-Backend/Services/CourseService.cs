@@ -29,12 +29,22 @@ namespace ELearning.API.Services
 
         public async Task<IEnumerable<CourseDto>> GetPublishedCoursesAsync()
         {
+            // Debug: Check total courses in database
+            var totalCourses = await _context.Courses.CountAsync();
+            Console.WriteLine($"Total courses in database: {totalCourses}");
+            
+            var publishedCourses = await _context.Courses
+                .Where(c => c.Status == CourseStatus.Published)
+                .CountAsync();
+            Console.WriteLine($"Published courses: {publishedCourses}");
+            
             var courses = await _context.Courses
                 .Where(c => c.Status == CourseStatus.Published)
                 .Include(c => c.Instructor)
                 .Include(c => c.Category)
                 .ToListAsync();
 
+            Console.WriteLine($"Returning {courses.Count} courses");
             return _mapper.Map<IEnumerable<CourseDto>>(courses);
         }
 
@@ -66,7 +76,7 @@ namespace ELearning.API.Services
                 Price = createCourseDto.Price,
                 IsFree = createCourseDto.IsFree,
                 Level = Enum.Parse<CourseLevel>(createCourseDto.Level),
-                Status = CourseStatus.Draft,
+                Status = CourseStatus.Published,
                 Duration = createCourseDto.Duration,
                 Prerequisites = createCourseDto.Prerequisites,
                 LearningOutcomes = createCourseDto.LearningOutcomes,

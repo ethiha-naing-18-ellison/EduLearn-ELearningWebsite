@@ -54,7 +54,9 @@ const Courses = () => {
         category: categoryFilter
       });
 
+      console.log('Fetching courses from:', `http://localhost:5000/api/courses?${params}`);
       const response = await axios.get(`http://localhost:5000/api/courses?${params}`);
+      console.log('Courses response:', response.data);
       setCourses(response.data);
       setTotalPages(Math.ceil(response.data.length / 12));
     } catch (error) {

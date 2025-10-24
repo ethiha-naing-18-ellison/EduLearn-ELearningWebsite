@@ -26,10 +26,12 @@ import {
   Schedule
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalCourses: 0,
     enrolledCourses: 0,
@@ -219,7 +221,11 @@ const Dashboard = () => {
                         <Typography variant="h6" color="primary">
                           ${course.price}
                         </Typography>
-                        <Button size="small" variant="outlined">
+                        <Button 
+                          size="small" 
+                          variant="outlined"
+                          onClick={() => navigate(`/course/${course.id}`)}
+                        >
                           View
                         </Button>
                       </Box>
@@ -230,7 +236,10 @@ const Dashboard = () => {
               </List>
             </CardContent>
             <CardActions>
-              <Button fullWidth>
+              <Button 
+                fullWidth
+                onClick={() => navigate('/courses')}
+              >
                 View All Courses
               </Button>
             </CardActions>
@@ -247,25 +256,55 @@ const Dashboard = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {user.role === 'Instructor' || user.role === 'Admin' ? (
                   <>
-                    <Button variant="contained" startIcon={<BookOnline />} fullWidth>
+                    <Button 
+                      variant="contained" 
+                      startIcon={<BookOnline />} 
+                      fullWidth
+                      onClick={() => navigate('/create-course')}
+                    >
                       Create New Course
                     </Button>
-                    <Button variant="outlined" startIcon={<People />} fullWidth>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<People />} 
+                      fullWidth
+                      onClick={() => navigate('/students')}
+                    >
                       Manage Students
                     </Button>
-                    <Button variant="outlined" startIcon={<Assignment />} fullWidth>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Assignment />} 
+                      fullWidth
+                      onClick={() => navigate('/assignments')}
+                    >
                       View Assignments
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button variant="contained" startIcon={<BookOnline />} fullWidth>
+                    <Button 
+                      variant="contained" 
+                      startIcon={<BookOnline />} 
+                      fullWidth
+                      onClick={() => navigate('/courses')}
+                    >
                       Browse Courses
                     </Button>
-                    <Button variant="outlined" startIcon={<Schedule />} fullWidth>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Schedule />} 
+                      fullWidth
+                      onClick={() => navigate('/schedule')}
+                    >
                       My Schedule
                     </Button>
-                    <Button variant="outlined" startIcon={<Assignment />} fullWidth>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Assignment />} 
+                      fullWidth
+                      onClick={() => navigate('/assignments')}
+                    >
                       My Assignments
                     </Button>
                   </>
