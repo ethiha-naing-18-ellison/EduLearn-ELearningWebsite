@@ -27,7 +27,12 @@ namespace ELearning.API.Services
             return _mapper.Map<IEnumerable<CourseDto>>(courses);
         }
 
-        public async Task<IEnumerable<CourseDto>> GetPublishedCoursesAsync()
+        public async Task<IEnumerable<CourseDto>> GetPublishedCoursesAsync(
+            string? search = null, 
+            string? level = null, 
+            string? category = null, 
+            int page = 1, 
+            int limit = 12)
         {
             // Debug: Check total courses in database
             var totalCourses = await _context.Courses.CountAsync();
@@ -37,14 +42,48 @@ namespace ELearning.API.Services
                 .Where(c => c.Status == CourseStatus.Published)
                 .CountAsync();
             Console.WriteLine($"Published courses: {publishedCourses}");
-            
-            var courses = await _context.Courses
+
+            // Build the query with filters
+            var query = _context.Courses
                 .Where(c => c.Status == CourseStatus.Published)
                 .Include(c => c.Instructor)
                 .Include(c => c.Category)
+                .AsQueryable();
+
+            // Apply search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(c => c.Title.Contains(search) || 
+                                       c.Description.Contains(search) ||
+                                       c.Instructor.FirstName.Contains(search) ||
+                                       c.Instructor.LastName.Contains(search));
+                Console.WriteLine($"Applied search filter: {search}");
+            }
+
+            // Apply level filter
+            if (!string.IsNullOrEmpty(level))
+            {
+                if (Enum.TryParse<CourseLevel>(level, true, out var courseLevel))
+                {
+                    query = query.Where(c => c.Level == courseLevel);
+                    Console.WriteLine($"Applied level filter: {level}");
+                }
+            }
+
+            // Apply category filter
+            if (!string.IsNullOrEmpty(category))
+            {
+                query = query.Where(c => c.Category.Name == category);
+                Console.WriteLine($"Applied category filter: {category}");
+            }
+
+            // Apply pagination
+            var courses = await query
+                .Skip((page - 1) * limit)
+                .Take(limit)
                 .ToListAsync();
 
-            Console.WriteLine($"Returning {courses.Count} courses");
+            Console.WriteLine($"Returning {courses.Count} courses with filters - Search: {search}, Level: {level}, Category: {category}");
             return _mapper.Map<IEnumerable<CourseDto>>(courses);
         }
 

@@ -17,11 +17,16 @@ namespace ELearning.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CourseDto>>> GetCourses()
+        public async Task<ActionResult<IEnumerable<CourseDto>>> GetCourses(
+            [FromQuery] string? search = null,
+            [FromQuery] string? level = null,
+            [FromQuery] string? category = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 12)
         {
             try
             {
-                var courses = await _courseService.GetPublishedCoursesAsync();
+                var courses = await _courseService.GetPublishedCoursesAsync(search, level, category, page, limit);
                 return Ok(courses);
             }
             catch (Exception ex)

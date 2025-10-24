@@ -5,7 +5,7 @@ namespace ELearning.API.Services
     public interface ICourseService
     {
         Task<IEnumerable<CourseDto>> GetAllCoursesAsync();
-        Task<IEnumerable<CourseDto>> GetPublishedCoursesAsync();
+        Task<IEnumerable<CourseDto>> GetPublishedCoursesAsync(string? search = null, string? level = null, string? category = null, int page = 1, int limit = 12);
         Task<CourseDto> GetCourseByIdAsync(int id);
         Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto, int instructorId);
         Task<CourseDto> UpdateCourseAsync(int id, UpdateCourseDto updateCourseDto, int userId);
