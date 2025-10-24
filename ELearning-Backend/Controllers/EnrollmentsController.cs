@@ -17,6 +17,21 @@ namespace ELearning.API.Controllers
             _enrollmentService = enrollmentService;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<EnrollmentDto>>> GetEnrollments()
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst("userId")?.Value ?? "0");
+                var enrollments = await _enrollmentService.GetUserEnrollmentsAsync(userId);
+                return Ok(enrollments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("user/{userId}")]
         public async Task<ActionResult<IEnumerable<EnrollmentDto>>> GetUserEnrollments(int userId)
         {
