@@ -105,7 +105,10 @@ const Navbar = () => {
                 onClick={handleMenu}
                 color="inherit"
               >
-                <Avatar sx={{ width: 32, height: 32 }}>
+                <Avatar 
+                  src={user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : null}
+                  sx={{ width: 32, height: 32 }}
+                >
                   {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
                 </Avatar>
               </IconButton>

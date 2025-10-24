@@ -102,12 +102,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
-    loading
+    loading,
+    updateUser
   };
 
   return (

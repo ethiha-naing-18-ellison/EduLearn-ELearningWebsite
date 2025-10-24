@@ -32,7 +32,7 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
 const Profile = () => {
-  const { user, login } = useAuth();
+  const { user, login, updateUser } = useAuth();
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
@@ -117,11 +117,10 @@ const Profile = () => {
       setProfilePicture(null);
       setProfilePicturePreview(null);
       
-      // Refresh user data
+      // Refresh user data and update context
       const userResponse = await axios.get('http://localhost:5000/api/users/profile');
       console.log('Updated user data:', userResponse.data);
-      // Update context with new user data
-      // This would require updating the AuthContext to have an updateUser method
+      updateUser(userResponse.data);
     } catch (error) {
       console.error('Profile update error:', error);
       setMessage('Failed to update profile');
