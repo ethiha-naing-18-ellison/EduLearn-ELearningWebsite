@@ -25,7 +25,8 @@ import {
   School,
   Edit,
   Save,
-  Cancel
+  Cancel,
+  PhotoCamera
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -44,6 +45,8 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -65,17 +68,62 @@ const Profile = () => {
     });
   };
 
+  const handleProfilePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfilePicture(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfilePicturePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.put('http://localhost:5000/api/users/profile', profileData);
+      const formData = new FormData();
+      
+      // Add profile data
+      Object.keys(profileData).forEach(key => {
+        if (profileData[key] !== null && profileData[key] !== undefined) {
+          formData.append(key, profileData[key]);
+        }
+      });
+      
+      // Add profile picture if selected
+      if (profilePicture) {
+        formData.append('profilePicture', profilePicture);
+        console.log('Profile picture added to form data:', profilePicture.name, profilePicture.size);
+      }
+      
+      // Debug: Log form data contents
+      console.log('Form data contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+      
+      const response = await axios.put('http://localhost:5000/api/users/profile', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('Profile update response:', response.data);
+      
       setMessage('Profile updated successfully!');
       setEditMode(false);
+      setProfilePicture(null);
+      setProfilePicturePreview(null);
+      
       // Refresh user data
-      const response = await axios.get('http://localhost:5000/api/users/profile');
+      const userResponse = await axios.get('http://localhost:5000/api/users/profile');
+      console.log('Updated user data:', userResponse.data);
       // Update context with new user data
       // This would require updating the AuthContext to have an updateUser method
     } catch (error) {
+      console.error('Profile update error:', error);
       setMessage('Failed to update profile');
     } finally {
       setLoading(false);
@@ -93,6 +141,8 @@ const Profile = () => {
     });
     setEditMode(false);
     setMessage('');
+    setProfilePicture(null);
+    setProfilePicturePreview(null);
   };
 
   const getRoleColor = (role) => {
@@ -116,6 +166,7 @@ const Profile = () => {
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Avatar
+                src={profilePicturePreview || (user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : null)}
                 sx={{ 
                   width: 120, 
                   height: 120, 
@@ -160,6 +211,28 @@ const Profile = () => {
               >
                 Edit Profile
               </Button>
+              
+              {editMode && (
+                <Box sx={{ mt: 2 }}>
+                  <input
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    id="profile-picture-upload"
+                    type="file"
+                    onChange={handleProfilePictureChange}
+                  />
+                  <label htmlFor="profile-picture-upload">
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      startIcon={<PhotoCamera />}
+                      size="small"
+                    >
+                      Change Photo
+                    </Button>
+                  </label>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>

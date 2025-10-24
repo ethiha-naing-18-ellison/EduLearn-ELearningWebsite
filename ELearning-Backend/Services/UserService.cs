@@ -93,6 +93,9 @@ namespace ELearning.API.Services
             if (!string.IsNullOrEmpty(updateUserDto.Address))
                 user.Address = updateUserDto.Address;
 
+            if (!string.IsNullOrEmpty(updateUserDto.ProfilePicture))
+                user.ProfilePicture = updateUserDto.ProfilePicture;
+
             user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

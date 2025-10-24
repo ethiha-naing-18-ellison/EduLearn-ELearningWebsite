@@ -161,12 +161,44 @@ namespace ELearning.API.Controllers
         }
 
         [HttpPut("profile")]
-        public async Task<ActionResult<UserDto>> UpdateProfile([FromBody] UpdateUserDto updateUserDto)
+        public async Task<ActionResult<UserDto>> UpdateProfile([FromForm] UpdateUserDto updateUserDto, IFormFile? profilePicture)
         {
             try
             {
                 var userId = int.Parse(User.FindFirst("userId")?.Value ?? "0");
+                
+                // Debug logging
+                Console.WriteLine($"Updating profile for user {userId}");
+                Console.WriteLine($"ProfilePicture file: {profilePicture?.FileName}, Size: {profilePicture?.Length}");
+                Console.WriteLine($"UpdateUserDto ProfilePicture: {updateUserDto.ProfilePicture}");
+                
+                // Handle profile picture upload
+                if (profilePicture != null && profilePicture.Length > 0)
+                {
+                    // Create uploads directory if it doesn't exist
+                    var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "profiles");
+                    if (!Directory.Exists(uploadsPath))
+                    {
+                        Directory.CreateDirectory(uploadsPath);
+                    }
+                    
+                    // Generate unique filename
+                    var fileName = $"{userId}_{DateTime.Now.Ticks}{Path.GetExtension(profilePicture.FileName)}";
+                    var filePath = Path.Combine(uploadsPath, fileName);
+                    
+                    // Save file
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await profilePicture.CopyToAsync(stream);
+                    }
+                    
+                    // Update profile picture path
+                    updateUserDto.ProfilePicture = $"/uploads/profiles/{fileName}";
+                    Console.WriteLine($"Profile picture saved to: {updateUserDto.ProfilePicture}");
+                }
+                
                 var user = await _userService.UpdateUserAsync(userId, updateUserDto);
+                Console.WriteLine($"User updated successfully. ProfilePicture: {user.ProfilePicture}");
                 return Ok(user);
             }
             catch (KeyNotFoundException ex)
@@ -175,6 +207,7 @@ namespace ELearning.API.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"Error updating profile: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
