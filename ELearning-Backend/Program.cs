@@ -54,6 +54,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILessonService, LessonService>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<IQuizService, QuizService>();
+builder.Services.AddScoped<IVideoService, VideoService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));

@@ -38,7 +38,8 @@ import {
   Quiz,
   Schedule,
   Grade,
-  Visibility
+  Visibility,
+  VideoLibrary
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,6 +53,7 @@ const ManageCourseMaterials = () => {
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
+  const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
@@ -68,17 +70,19 @@ const ManageCourseMaterials = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      const [courseRes, lessonsRes, assignmentsRes, quizzesRes] = await Promise.all([
+      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/courses/${id}`),
         axios.get(`http://localhost:5000/api/lessons/course/${id}`),
         axios.get(`http://localhost:5000/api/assignments/course/${id}`),
-        axios.get(`http://localhost:5000/api/quizzes/course/${id}`)
+        axios.get(`http://localhost:5000/api/quizzes/course/${id}`),
+        axios.get(`http://localhost:5000/api/videos/course/${id}`)
       ]);
       
       setCourse(courseRes.data);
       setLessons(lessonsRes.data);
       setAssignments(assignmentsRes.data);
       setQuizzes(quizzesRes.data);
+      setVideos(videosRes.data);
     } catch (error) {
       console.error('Error fetching course data:', error);
       setMessage('Error loading course materials');
@@ -127,6 +131,23 @@ const ManageCourseMaterials = () => {
         totalMarks: 100,
         totalQuestions: 10
       });
+    } else if (type === 'video') {
+      setFormData({
+        title: '',
+        description: '',
+        videoUrl: '',
+        videoFile: '',
+        thumbnail: '',
+        duration: 0,
+        order: videos.length + 1,
+        isFree: false,
+        isPublished: true,
+        videoType: 'Upload',
+        quality: 'HD',
+        transcript: '',
+        notes: '',
+        courseId: parseInt(id)
+      });
     }
     
     setOpenDialog(true);
@@ -171,6 +192,24 @@ const ManageCourseMaterials = () => {
         totalQuestions: item.totalQuestions || 10,
         ...item
       });
+    } else if (type === 'video') {
+      setFormData({
+        title: item.title,
+        description: item.description,
+        videoUrl: item.videoUrl || '',
+        videoFile: item.videoFile || '',
+        thumbnail: item.thumbnail || '',
+        duration: item.duration || 0,
+        order: item.order || 1,
+        isFree: item.isFree || false,
+        isPublished: item.isPublished !== undefined ? item.isPublished : true,
+        videoType: item.videoType || 'Upload',
+        quality: item.quality || 'HD',
+        transcript: item.transcript || '',
+        notes: item.notes || '',
+        courseId: parseInt(id),
+        ...item
+      });
     }
     
     setOpenDialog(true);
@@ -181,7 +220,8 @@ const ManageCourseMaterials = () => {
     
     try {
       const endpoint = type === 'lesson' ? 'lessons' : 
-                     type === 'assignment' ? 'assignments' : 'quizzes';
+                     type === 'assignment' ? 'assignments' : 
+                     type === 'quiz' ? 'quizzes' : 'videos';
       await axios.delete(`http://localhost:5000/api/${endpoint}/${item.id}`);
       setMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
       fetchCourseData();
@@ -197,7 +237,8 @@ const ManageCourseMaterials = () => {
     
     try {
       const endpoint = dialogType === 'lesson' ? 'lessons' : 
-                     dialogType === 'assignment' ? 'assignments' : 'quizzes';
+                     dialogType === 'assignment' ? 'assignments' : 
+                     dialogType === 'quiz' ? 'quizzes' : 'videos';
       
       // Prepare the data based on the type
       
@@ -282,6 +323,38 @@ const ManageCourseMaterials = () => {
           setMessage('Description is required for quizzes');
           return;
         }
+      } else if (dialogType === 'video') {
+        // Ensure all required fields are present for videos
+        requestData = {
+          title: formData.title || 'Untitled Video',
+          description: formData.description || 'No description provided',
+          videoUrl: formData.videoUrl || '',
+          videoFile: formData.videoFile || '',
+          thumbnail: formData.thumbnail || '',
+          duration: formData.duration || 0,
+          order: formData.order || 1,
+          isFree: formData.isFree || false,
+          isPublished: formData.isPublished !== undefined ? formData.isPublished : true,
+          videoType: formData.videoType || 'Upload',
+          quality: formData.quality || 'HD',
+          transcript: formData.transcript || '',
+          notes: formData.notes || '',
+          courseId: formData.courseId
+        };
+        
+        // Validate required fields
+        if (!requestData.title.trim()) {
+          setMessage('Title is required for videos');
+          return;
+        }
+        if (!requestData.description.trim()) {
+          setMessage('Description is required for videos');
+          return;
+        }
+        if (!requestData.videoUrl && !requestData.videoFile) {
+          setMessage('Either video URL or video file is required');
+          return;
+        }
       }
       
       if (editingItem) {
@@ -357,6 +430,7 @@ const ManageCourseMaterials = () => {
             <Tab label={`Lessons (${lessons.length})`} />
             <Tab label={`Assignments (${assignments.length})`} />
             <Tab label={`Quizzes (${quizzes.length})`} />
+            <Tab label={`Videos (${videos.length})`} />
           </Tabs>
         </Box>
 
@@ -518,6 +592,58 @@ const ManageCourseMaterials = () => {
                 {quizzes.length === 0 && (
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
                     No quizzes added yet. Click "Add Quiz" to get started.
+                  </Typography>
+                )}
+              </List>
+            </Box>
+          )}
+
+          {/* Videos Tab */}
+          {tabValue === 3 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Course Videos</Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => handleAddNew('video')}
+                >
+                  Add Video
+                </Button>
+              </Box>
+              <List>
+                {videos.map((video) => (
+                  <ListItem key={video.id} divider>
+                    <ListItemText
+                      primary={video.title}
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {video.description}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <Chip label={`${Math.floor(video.duration / 60)}:${(video.duration % 60).toString().padStart(2, '0')}`} size="small" />
+                            <Chip label={video.videoType} size="small" />
+                            <Chip label={video.quality} size="small" />
+                            {video.isFree && <Chip label="Free" size="small" color="success" />}
+                            {!video.isPublished && <Chip label="Draft" size="small" color="warning" />}
+                          </Box>
+                        </Box>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton onClick={() => handleEdit(video, 'video')}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton onClick={() => handleDelete(video, 'video')}>
+                        <Delete />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+                {videos.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                    No videos added yet. Click "Add Video" to get started.
                   </Typography>
                 )}
               </List>
@@ -688,6 +814,119 @@ const ManageCourseMaterials = () => {
                   type="number"
                   value={formData.totalMarks || ''}
                   onChange={(e) => handleFormChange('totalMarks', parseInt(e.target.value))}
+                  sx={{ mb: 2 }}
+                />
+              </>
+            )}
+
+            {dialogType === 'video' && (
+              <>
+                <TextField
+                  fullWidth
+                  label="Video URL"
+                  value={formData.videoUrl || ''}
+                  onChange={(e) => handleFormChange('videoUrl', e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Video File Path"
+                  value={formData.videoFile || ''}
+                  onChange={(e) => handleFormChange('videoFile', e.target.value)}
+                  placeholder="/uploads/videos/video.mp4"
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Thumbnail URL"
+                  value={formData.thumbnail || ''}
+                  onChange={(e) => handleFormChange('thumbnail', e.target.value)}
+                  placeholder="https://example.com/thumbnail.jpg"
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Duration (seconds)"
+                  type="number"
+                  value={formData.duration || ''}
+                  onChange={(e) => handleFormChange('duration', parseInt(e.target.value))}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Order"
+                  type="number"
+                  value={formData.order || ''}
+                  onChange={(e) => handleFormChange('order', parseInt(e.target.value))}
+                  sx={{ mb: 2 }}
+                />
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Video Type</InputLabel>
+                  <Select
+                    value={formData.videoType || 'Upload'}
+                    onChange={(e) => handleFormChange('videoType', e.target.value)}
+                    label="Video Type"
+                  >
+                    <MenuItem value="Upload">Upload</MenuItem>
+                    <MenuItem value="YouTube">YouTube</MenuItem>
+                    <MenuItem value="Vimeo">Vimeo</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Quality</InputLabel>
+                  <Select
+                    value={formData.quality || 'HD'}
+                    onChange={(e) => handleFormChange('quality', e.target.value)}
+                    label="Quality"
+                  >
+                    <MenuItem value="SD">SD</MenuItem>
+                    <MenuItem value="HD">HD</MenuItem>
+                    <MenuItem value="FHD">FHD</MenuItem>
+                    <MenuItem value="UHD4K">UHD 4K</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Is Free</InputLabel>
+                  <Select
+                    value={formData.isFree ? 'true' : 'false'}
+                    onChange={(e) => handleFormChange('isFree', e.target.value === 'true')}
+                    label="Is Free"
+                  >
+                    <MenuItem value="false">Premium</MenuItem>
+                    <MenuItem value="true">Free</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Is Published</InputLabel>
+                  <Select
+                    value={formData.isPublished ? 'true' : 'false'}
+                    onChange={(e) => handleFormChange('isPublished', e.target.value === 'true')}
+                    label="Is Published"
+                  >
+                    <MenuItem value="true">Published</MenuItem>
+                    <MenuItem value="false">Draft</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Transcript"
+                  value={formData.transcript || ''}
+                  onChange={(e) => handleFormChange('transcript', e.target.value)}
+                  multiline
+                  rows={3}
+                  placeholder="Video transcript or subtitles..."
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Instructor Notes"
+                  value={formData.notes || ''}
+                  onChange={(e) => handleFormChange('notes', e.target.value)}
+                  multiline
+                  rows={2}
+                  placeholder="Private notes for instructors..."
                   sx={{ mb: 2 }}
                 />
               </>

@@ -31,7 +31,8 @@ import {
   Assignment,
   Quiz,
   CheckCircle,
-  Lock
+  Lock,
+  VideoLibrary
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,6 +46,7 @@ const CourseDetail = () => {
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
+  const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const [tabValue, setTabValue] = useState(0);
@@ -57,17 +59,19 @@ const CourseDetail = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      const [courseRes, lessonsRes, assignmentsRes, quizzesRes] = await Promise.all([
+      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/courses/${id}`),
         axios.get(`http://localhost:5000/api/lessons/course/${id}`),
         axios.get(`http://localhost:5000/api/assignments/course/${id}`),
-        axios.get(`http://localhost:5000/api/quizzes/course/${id}`)
+        axios.get(`http://localhost:5000/api/quizzes/course/${id}`),
+        axios.get(`http://localhost:5000/api/videos/course/${id}`)
       ]);
       
       setCourse(courseRes.data);
       setLessons(lessonsRes.data);
       setAssignments(assignmentsRes.data);
       setQuizzes(quizzesRes.data);
+      setVideos(videosRes.data);
     } catch (error) {
       console.error('Error fetching course data:', error);
     } finally {
@@ -148,6 +152,21 @@ const CourseDetail = () => {
         return <Assignment color="default" />;
       default:
         return <PlayCircle color="primary" />;
+    }
+  };
+
+  const getVideoTypeIcon = (videoType) => {
+    switch (videoType) {
+      case 'YouTube':
+        return <VideoLibrary color="error" />;
+      case 'Vimeo':
+        return <VideoLibrary color="primary" />;
+      case 'Upload':
+        return <VideoLibrary color="success" />;
+      case 'Other':
+        return <VideoLibrary color="default" />;
+      default:
+        return <VideoLibrary color="primary" />;
     }
   };
 
@@ -314,8 +333,40 @@ const CourseDetail = () => {
                       </ListItem>
                     ))}
                     
+                    {/* Display videos */}
+                    {videos.map((video, index) => (
+                      <ListItem key={`video-${video.id}`} sx={{ px: 0 }}>
+                        <ListItemIcon>
+                          {getVideoTypeIcon(video.videoType)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={video.title}
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Video - {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {video.videoType} • {video.quality}
+                              </Typography>
+                              {video.isFree && (
+                                <Chip label="Free" size="small" color="success" />
+                              )}
+                            </Box>
+                          }
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {enrolled ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <Lock color="disabled" />
+                          )}
+                        </Box>
+                      </ListItem>
+                    ))}
+                    
                     {/* Show message if no content */}
-                    {sortedLessons.length === 0 && assignments.length === 0 && quizzes.length === 0 && (
+                    {sortedLessons.length === 0 && assignments.length === 0 && quizzes.length === 0 && videos.length === 0 && (
                       <ListItem sx={{ px: 0 }}>
                         <ListItemText
                           primary="No course content available yet"
@@ -432,6 +483,12 @@ const CourseDetail = () => {
                       <Quiz color="info" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
                     <ListItemText primary={`${quizzes.length} quizzes`} />
+                  </ListItem>
+                  <ListItem sx={{ px: 0 }}>
+                    <ListItemIcon>
+                      <VideoLibrary color="success" sx={{ fontSize: 20 }} />
+                    </ListItemIcon>
+                    <ListItemText primary={`${videos.length} videos`} />
                   </ListItem>
                 </List>
               </Box>

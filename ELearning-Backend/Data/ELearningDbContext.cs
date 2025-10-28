@@ -19,6 +19,7 @@ namespace ELearning.API.Data
         public DbSet<Quiz> Quizzes { get; set; }
         public DbSet<QuizQuestion> QuizQuestions { get; set; }
         public DbSet<QuizAttempt> QuizAttempts { get; set; }
+        public DbSet<Video> Videos { get; set; }
         public DbSet<Progress> Progress { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
 
@@ -160,6 +161,23 @@ namespace ELearning.API.Data
                 entity.HasOne(e => e.User)
                       .WithMany(u => u.QuizAttempts)
                       .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Video configuration
+            modelBuilder.Entity<Video>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).IsRequired();
+                entity.Property(e => e.VideoUrl).HasMaxLength(500);
+                entity.Property(e => e.VideoFile).HasMaxLength(500);
+                entity.Property(e => e.Thumbnail).HasMaxLength(500);
+                entity.Property(e => e.VideoType).HasConversion<string>();
+                entity.Property(e => e.Quality).HasConversion<string>();
+                entity.HasOne(e => e.Course)
+                      .WithMany(c => c.Videos)
+                      .HasForeignKey(e => e.CourseId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 

@@ -43,6 +43,13 @@ namespace ELearning.API.Mapping
             CreateMap<CreateAssignmentDto, Assignment>();
             CreateMap<UpdateAssignmentDto, Assignment>();
 
+            // Video mappings
+            CreateMap<Video, VideoDto>()
+                .ForMember(dest => dest.VideoType, opt => opt.MapFrom(src => src.VideoType.ToString()))
+                .ForMember(dest => dest.Quality, opt => opt.MapFrom(src => src.Quality.ToString()));
+            CreateMap<CreateVideoDto, Video>();
+            CreateMap<UpdateVideoDto, Video>();
+
             // Submission mappings
             CreateMap<Submission, SubmissionDto>()
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
