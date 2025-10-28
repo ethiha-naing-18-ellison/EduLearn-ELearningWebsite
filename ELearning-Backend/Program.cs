@@ -54,6 +54,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILessonService, LessonService>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<IQuizService, QuizService>();
+builder.Services.AddScoped<IQuizQuestionService, QuizQuestionService>();
 builder.Services.AddScoped<IVideoService, VideoService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 

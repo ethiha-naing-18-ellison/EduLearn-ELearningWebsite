@@ -26,9 +26,15 @@ namespace ELearning.API.Services
                 Id = q.Id,
                 Title = q.Title,
                 Description = q.Description ?? "",
-                Duration = q.TimeLimit,
+                TimeLimit = q.TimeLimit,
+                MaxAttempts = q.MaxAttempts,
+                IsRandomized = q.IsRandomized,
+                ShowCorrectAnswers = q.ShowCorrectAnswers,
+                ShowResultsImmediately = q.ShowResultsImmediately,
+                PassingScore = q.PassingScore,
+                AvailableFrom = q.AvailableFrom,
+                AvailableUntil = q.AvailableUntil,
                 TotalQuestions = q.Questions?.Count ?? 0,
-                TotalMarks = 100, // Default total marks
                 CourseId = q.CourseId,
                 CreatedAt = q.CreatedAt,
                 UpdatedAt = q.UpdatedAt
@@ -51,9 +57,15 @@ namespace ELearning.API.Services
                 Id = quiz.Id,
                 Title = quiz.Title,
                 Description = quiz.Description ?? "",
-                Duration = quiz.TimeLimit,
+                TimeLimit = quiz.TimeLimit,
+                MaxAttempts = quiz.MaxAttempts,
+                IsRandomized = quiz.IsRandomized,
+                ShowCorrectAnswers = quiz.ShowCorrectAnswers,
+                ShowResultsImmediately = quiz.ShowResultsImmediately,
+                PassingScore = quiz.PassingScore,
+                AvailableFrom = quiz.AvailableFrom,
+                AvailableUntil = quiz.AvailableUntil,
                 TotalQuestions = quiz.Questions?.Count ?? 0,
-                TotalMarks = 100, // Default total marks
                 CourseId = quiz.CourseId,
                 CreatedAt = quiz.CreatedAt,
                 UpdatedAt = quiz.UpdatedAt
@@ -66,7 +78,14 @@ namespace ELearning.API.Services
             {
                 Title = createQuizDto.Title,
                 Description = createQuizDto.Description,
-                TimeLimit = createQuizDto.Duration,
+                TimeLimit = createQuizDto.TimeLimit,
+                MaxAttempts = createQuizDto.MaxAttempts,
+                IsRandomized = createQuizDto.IsRandomized,
+                ShowCorrectAnswers = createQuizDto.ShowCorrectAnswers,
+                ShowResultsImmediately = createQuizDto.ShowResultsImmediately,
+                PassingScore = createQuizDto.PassingScore,
+                AvailableFrom = createQuizDto.AvailableFrom,
+                AvailableUntil = createQuizDto.AvailableUntil,
                 CourseId = courseId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -80,9 +99,15 @@ namespace ELearning.API.Services
                 Id = quiz.Id,
                 Title = quiz.Title,
                 Description = quiz.Description ?? "",
-                Duration = quiz.TimeLimit,
+                TimeLimit = quiz.TimeLimit,
+                MaxAttempts = quiz.MaxAttempts,
+                IsRandomized = quiz.IsRandomized,
+                ShowCorrectAnswers = quiz.ShowCorrectAnswers,
+                ShowResultsImmediately = quiz.ShowResultsImmediately,
+                PassingScore = quiz.PassingScore,
+                AvailableFrom = quiz.AvailableFrom,
+                AvailableUntil = quiz.AvailableUntil,
                 TotalQuestions = 0,
-                TotalMarks = 100, // Default total marks
                 CourseId = quiz.CourseId,
                 CreatedAt = quiz.CreatedAt,
                 UpdatedAt = quiz.UpdatedAt
@@ -101,8 +126,22 @@ namespace ELearning.API.Services
                 quiz.Title = updateQuizDto.Title;
             if (!string.IsNullOrEmpty(updateQuizDto.Description))
                 quiz.Description = updateQuizDto.Description;
-            if (updateQuizDto.Duration.HasValue)
-                quiz.TimeLimit = updateQuizDto.Duration.Value;
+            if (updateQuizDto.TimeLimit.HasValue)
+                quiz.TimeLimit = updateQuizDto.TimeLimit.Value;
+            if (updateQuizDto.MaxAttempts.HasValue)
+                quiz.MaxAttempts = updateQuizDto.MaxAttempts.Value;
+            if (updateQuizDto.IsRandomized.HasValue)
+                quiz.IsRandomized = updateQuizDto.IsRandomized.Value;
+            if (updateQuizDto.ShowCorrectAnswers.HasValue)
+                quiz.ShowCorrectAnswers = updateQuizDto.ShowCorrectAnswers.Value;
+            if (updateQuizDto.ShowResultsImmediately.HasValue)
+                quiz.ShowResultsImmediately = updateQuizDto.ShowResultsImmediately.Value;
+            if (updateQuizDto.PassingScore.HasValue)
+                quiz.PassingScore = updateQuizDto.PassingScore.Value;
+            if (updateQuizDto.AvailableFrom.HasValue)
+                quiz.AvailableFrom = updateQuizDto.AvailableFrom.Value;
+            if (updateQuizDto.AvailableUntil.HasValue)
+                quiz.AvailableUntil = updateQuizDto.AvailableUntil.Value;
 
             quiz.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
@@ -112,9 +151,15 @@ namespace ELearning.API.Services
                 Id = quiz.Id,
                 Title = quiz.Title,
                 Description = quiz.Description ?? "",
-                Duration = quiz.TimeLimit,
+                TimeLimit = quiz.TimeLimit,
+                MaxAttempts = quiz.MaxAttempts,
+                IsRandomized = quiz.IsRandomized,
+                ShowCorrectAnswers = quiz.ShowCorrectAnswers,
+                ShowResultsImmediately = quiz.ShowResultsImmediately,
+                PassingScore = quiz.PassingScore,
+                AvailableFrom = quiz.AvailableFrom,
+                AvailableUntil = quiz.AvailableUntil,
                 TotalQuestions = quiz.Questions?.Count ?? 0,
-                TotalMarks = 100, // Default total marks
                 CourseId = quiz.CourseId,
                 CreatedAt = quiz.CreatedAt,
                 UpdatedAt = quiz.UpdatedAt

@@ -27,7 +27,9 @@ import {
   MenuItem,
   CircularProgress,
   Alert,
-  Fab
+  Fab,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import {
   Add,
@@ -68,6 +70,12 @@ const ManageCourseMaterials = () => {
   const [selectedVideoFile, setSelectedVideoFile] = useState(null);
   const [selectedDocumentFile, setSelectedDocumentFile] = useState(null);
   const [selectedThumbnailFile, setSelectedThumbnailFile] = useState(null);
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  const [openQuestionsDialog, setOpenQuestionsDialog] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [openQuestionDialog, setOpenQuestionDialog] = useState(false);
+  const [questionFormData, setQuestionFormData] = useState({});
+  const [editingQuestion, setEditingQuestion] = useState(null);
 
   useEffect(() => {
     fetchCourseData();
@@ -139,9 +147,14 @@ const ManageCourseMaterials = () => {
         title: '',
         description: '',
         courseId: parseInt(id),
-        duration: 30,
-        totalMarks: 100,
-        totalQuestions: 10
+        timeLimit: 30,
+        maxAttempts: 1,
+        isRandomized: false,
+        showCorrectAnswers: true,
+        showResultsImmediately: true,
+        passingScore: 60,
+        availableFrom: '',
+        availableUntil: ''
       });
     } else if (type === 'video') {
       setFormData({
@@ -224,9 +237,14 @@ const ManageCourseMaterials = () => {
         title: item.title,
         description: item.description,
         courseId: parseInt(id),
-        duration: item.duration || 30,
-        totalMarks: item.totalMarks || 100,
-        totalQuestions: item.totalQuestions || 10,
+        timeLimit: item.timeLimit || 30,
+        maxAttempts: item.maxAttempts || 1,
+        isRandomized: item.isRandomized || false,
+        showCorrectAnswers: item.showCorrectAnswers !== undefined ? item.showCorrectAnswers : true,
+        showResultsImmediately: item.showResultsImmediately !== undefined ? item.showResultsImmediately : true,
+        passingScore: item.passingScore || 60,
+        availableFrom: item.availableFrom ? new Date(item.availableFrom).toISOString().slice(0, 16) : '',
+        availableUntil: item.availableUntil ? new Date(item.availableUntil).toISOString().slice(0, 16) : '',
         ...item
       });
     } else if (type === 'video') {
@@ -288,6 +306,105 @@ const ManageCourseMaterials = () => {
     } catch (error) {
       console.error(`Error deleting ${type}:`, error);
       setMessage(`Error deleting ${type}`);
+    }
+  };
+
+  const handleManageQuestions = async (quiz) => {
+    setSelectedQuiz(quiz);
+    try {
+      const response = await axios.get(`http://localhost:5000/api/quizquestions/quiz/${quiz.id}`);
+      setQuizQuestions(response.data);
+      setOpenQuestionsDialog(true);
+    } catch (error) {
+      console.error('Error fetching quiz questions:', error);
+      setMessage('Error loading quiz questions');
+    }
+  };
+
+  const fetchQuizQuestions = async (quizId) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/quizquestions/quiz/${quizId}`);
+      setQuizQuestions(response.data);
+    } catch (error) {
+      console.error('Error fetching quiz questions:', error);
+    }
+  };
+
+  const handleAddQuestion = () => {
+    setEditingQuestion(null);
+    setQuestionFormData({
+      question: '',
+      correctAnswer: '',
+      optionA: '',
+      optionB: '',
+      optionC: '',
+      optionD: '',
+      explanation: '',
+      points: 1,
+      type: 'MultipleChoice',
+      quizId: selectedQuiz?.id
+    });
+    setOpenQuestionDialog(true);
+  };
+
+  const handleEditQuestion = (question) => {
+    setEditingQuestion(question);
+    setQuestionFormData({
+      question: question.question,
+      correctAnswer: question.correctAnswer,
+      optionA: question.optionA || '',
+      optionB: question.optionB || '',
+      optionC: question.optionC || '',
+      optionD: question.optionD || '',
+      explanation: question.explanation || '',
+      points: question.points,
+      type: question.type,
+      quizId: question.quizId
+    });
+    setOpenQuestionDialog(true);
+  };
+
+  const handleDeleteQuestion = async (questionId) => {
+    if (!window.confirm('Are you sure you want to delete this question?')) return;
+    
+    try {
+      await axios.delete(`http://localhost:5000/api/quizquestions/${questionId}`);
+      setMessage('Question deleted successfully');
+      fetchQuizQuestions(selectedQuiz.id);
+    } catch (error) {
+      console.error('Error deleting question:', error);
+      setMessage('Error deleting question');
+    }
+  };
+
+  const handleQuestionFormChange = (field, value) => {
+    setQuestionFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveQuestion = async () => {
+    try {
+      setSaving(true);
+      
+      if (editingQuestion) {
+        // Update existing question
+        await axios.put(`http://localhost:5000/api/quizquestions/${editingQuestion.id}`, questionFormData);
+        setMessage('Question updated successfully');
+      } else {
+        // Create new question
+        await axios.post('http://localhost:5000/api/quizquestions', questionFormData);
+        setMessage('Question created successfully');
+      }
+      
+      setOpenQuestionDialog(false);
+      fetchQuizQuestions(selectedQuiz.id);
+    } catch (error) {
+      console.error('Error saving question:', error);
+      setMessage('Error saving question');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -391,9 +508,14 @@ const ManageCourseMaterials = () => {
         requestData = {
           title: formData.title || 'Untitled Quiz',
           description: formData.description || 'No description provided',
-          duration: formData.duration || 30,
-          totalMarks: formData.totalMarks || 100,
-          totalQuestions: formData.totalQuestions || 10,
+          timeLimit: formData.timeLimit || 30,
+          maxAttempts: formData.maxAttempts || 1,
+          isRandomized: formData.isRandomized || false,
+          showCorrectAnswers: formData.showCorrectAnswers !== undefined ? formData.showCorrectAnswers : true,
+          showResultsImmediately: formData.showResultsImmediately !== undefined ? formData.showResultsImmediately : true,
+          passingScore: formData.passingScore || 60,
+          availableFrom: formData.availableFrom ? new Date(formData.availableFrom).toISOString() : null,
+          availableUntil: formData.availableUntil ? new Date(formData.availableUntil).toISOString() : null,
           courseId: formData.courseId
         };
         
@@ -731,15 +853,26 @@ const ManageCourseMaterials = () => {
                           <Typography variant="body2" color="text.secondary">
                             {quiz.description}
                           </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Chip label={`${quiz.duration} min`} size="small" />
-                            <Chip label={`${quiz.totalMarks} marks`} size="small" />
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                            <Chip label={`${quiz.timeLimit} min`} size="small" />
+                            <Chip label={`${quiz.maxAttempts} attempts`} size="small" />
+                            <Chip label={`${quiz.passingScore}% pass`} size="small" />
                             <Chip label={`${quiz.totalQuestions} questions`} size="small" variant="outlined" />
+                            {quiz.isRandomized && <Chip label="Randomized" size="small" color="primary" />}
+                            {!quiz.showCorrectAnswers && <Chip label="No answers" size="small" color="warning" />}
                           </Box>
                         </Box>
                       }
                     />
                     <ListItemSecondaryAction>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleManageQuestions(quiz)}
+                        sx={{ mr: 1 }}
+                      >
+                        Questions
+                      </Button>
                       <IconButton onClick={() => handleEdit(quiz, 'quiz')}>
                         <Edit />
                       </IconButton>
@@ -1013,22 +1146,91 @@ const ManageCourseMaterials = () => {
             
             {dialogType === 'quiz' && (
               <>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Duration (minutes)"
-                  type="number"
-                  value={formData.duration || ''}
-                  onChange={(e) => handleFormChange('duration', parseInt(e.target.value))}
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Total Marks"
-                  type="number"
-                  value={formData.totalMarks || ''}
-                  onChange={(e) => handleFormChange('totalMarks', parseInt(e.target.value))}
-                  sx={{ mb: 2 }}
-                />
+                      label="Time Limit (minutes)"
+                      type="number"
+                      value={formData.timeLimit || ''}
+                      onChange={(e) => handleFormChange('timeLimit', parseInt(e.target.value))}
+                      inputProps={{ min: 1, max: 300 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Max Attempts"
+                      type="number"
+                      value={formData.maxAttempts || ''}
+                      onChange={(e) => handleFormChange('maxAttempts', parseInt(e.target.value))}
+                      inputProps={{ min: 1, max: 10 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Passing Score (%)"
+                      type="number"
+                      value={formData.passingScore || ''}
+                      onChange={(e) => handleFormChange('passingScore', parseFloat(e.target.value))}
+                      inputProps={{ min: 0, max: 100, step: 0.1 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Available From"
+                      type="datetime-local"
+                      value={formData.availableFrom || ''}
+                      onChange={(e) => handleFormChange('availableFrom', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Available Until"
+                      type="datetime-local"
+                      value={formData.availableUntil || ''}
+                      onChange={(e) => handleFormChange('availableUntil', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                </Grid>
+                
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                    Quiz Settings
+                  </Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.isRandomized || false}
+                        onChange={(e) => handleFormChange('isRandomized', e.target.checked)}
+                      />
+                    }
+                    label="Randomize question order"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.showCorrectAnswers !== undefined ? formData.showCorrectAnswers : true}
+                        onChange={(e) => handleFormChange('showCorrectAnswers', e.target.checked)}
+                      />
+                    }
+                    label="Show correct answers after completion"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.showResultsImmediately !== undefined ? formData.showResultsImmediately : true}
+                        onChange={(e) => handleFormChange('showResultsImmediately', e.target.checked)}
+                      />
+                    }
+                    label="Show results immediately"
+                  />
+                </Box>
               </>
             )}
 
@@ -1458,6 +1660,193 @@ const ManageCourseMaterials = () => {
             startIcon={saving ? <CircularProgress size={20} /> : null}
           >
             {saving ? 'Saving...' : (editingItem ? 'Update' : 'Create')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Quiz Questions Management Dialog */}
+      <Dialog 
+        open={openQuestionsDialog} 
+        onClose={() => setOpenQuestionsDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Manage Questions - {selectedQuiz?.title}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAddQuestion}
+            >
+              Add Question
+            </Button>
+          </Box>
+          
+          <List>
+            {quizQuestions.map((question, index) => (
+              <ListItem key={question.id} divider>
+                <ListItemText
+                  primary={
+                    <Box>
+                      <Typography variant="h6">
+                        Question {index + 1}
+                      </Typography>
+                      <Typography variant="body1" sx={{ mt: 1 }}>
+                        {question.question}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                        <Chip label={question.type} size="small" />
+                        <Chip label={`${question.points} points`} size="small" />
+                        {question.optionA && <Chip label={`A: ${question.optionA}`} size="small" variant="outlined" />}
+                        {question.optionB && <Chip label={`B: ${question.optionB}`} size="small" variant="outlined" />}
+                        {question.optionC && <Chip label={`C: ${question.optionC}`} size="small" variant="outlined" />}
+                        {question.optionD && <Chip label={`D: ${question.optionD}`} size="small" variant="outlined" />}
+                      </Box>
+                    </Box>
+                  }
+                />
+                <ListItemSecondaryAction>
+                  <IconButton onClick={() => handleEditQuestion(question)}>
+                    <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteQuestion(question.id)}>
+                    <Delete />
+                  </IconButton>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+            {quizQuestions.length === 0 && (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                No questions added yet. Click "Add Question" to get started.
+              </Typography>
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenQuestionsDialog(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Question Creation/Edit Dialog */}
+      <Dialog 
+        open={openQuestionDialog} 
+        onClose={() => setOpenQuestionDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingQuestion ? 'Edit Question' : 'Add New Question'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Question"
+            value={questionFormData.question || ''}
+            onChange={(e) => handleQuestionFormChange('question', e.target.value)}
+            multiline
+            rows={3}
+            sx={{ mb: 2 }}
+            required
+          />
+          
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Question Type</InputLabel>
+            <Select
+              value={questionFormData.type || 'MultipleChoice'}
+              onChange={(e) => handleQuestionFormChange('type', e.target.value)}
+              label="Question Type"
+            >
+              <MenuItem value="MultipleChoice">Multiple Choice</MenuItem>
+              <MenuItem value="TrueFalse">True/False</MenuItem>
+              <MenuItem value="ShortAnswer">Short Answer</MenuItem>
+              <MenuItem value="Essay">Essay</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Points"
+                type="number"
+                value={questionFormData.points || 1}
+                onChange={(e) => handleQuestionFormChange('points', parseFloat(e.target.value))}
+                inputProps={{ min: 0.1, step: 0.1 }}
+              />
+            </Grid>
+          </Grid>
+
+          {(questionFormData.type === 'MultipleChoice' || questionFormData.type === 'TrueFalse') && (
+            <>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Answer Options
+              </Typography>
+              <TextField
+                fullWidth
+                label="Option A"
+                value={questionFormData.optionA || ''}
+                onChange={(e) => handleQuestionFormChange('optionA', e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              <TextField
+                fullWidth
+                label="Option B"
+                value={questionFormData.optionB || ''}
+                onChange={(e) => handleQuestionFormChange('optionB', e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              <TextField
+                fullWidth
+                label="Option C"
+                value={questionFormData.optionC || ''}
+                onChange={(e) => handleQuestionFormChange('optionC', e.target.value)}
+                sx={{ mb: 1 }}
+              />
+              <TextField
+                fullWidth
+                label="Option D"
+                value={questionFormData.optionD || ''}
+                onChange={(e) => handleQuestionFormChange('optionD', e.target.value)}
+                sx={{ mb: 2 }}
+              />
+            </>
+          )}
+
+          <TextField
+            fullWidth
+            label="Correct Answer"
+            value={questionFormData.correctAnswer || ''}
+            onChange={(e) => handleQuestionFormChange('correctAnswer', e.target.value)}
+            sx={{ mb: 2 }}
+            required
+          />
+
+          <TextField
+            fullWidth
+            label="Explanation (Optional)"
+            value={questionFormData.explanation || ''}
+            onChange={(e) => handleQuestionFormChange('explanation', e.target.value)}
+            multiline
+            rows={2}
+            placeholder="Explain why this is the correct answer..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenQuestionDialog(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveQuestion}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={20} /> : null}
+          >
+            {saving ? 'Saving...' : (editingQuestion ? 'Update Question' : 'Create Question')}
           </Button>
         </DialogActions>
       </Dialog>
