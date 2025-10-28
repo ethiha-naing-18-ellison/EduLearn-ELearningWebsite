@@ -84,6 +84,7 @@ namespace ELearning.API.Data
             modelBuilder.Entity<Enrollment>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.Status).HasConversion<string>();
                 entity.HasOne(e => e.User)
                       .WithMany(u => u.Enrollments)
                       .HasForeignKey(e => e.UserId)

@@ -57,7 +57,17 @@ namespace ELearning.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst("userId")?.Value ?? "0");
+                if (enrollRequest == null || enrollRequest.CourseId <= 0)
+                {
+                    return BadRequest(new { message = "Invalid course ID provided" });
+                }
+
+                var userIdClaim = User.FindFirst("userId")?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId) || userId <= 0)
+                {
+                    return Unauthorized(new { message = "Invalid user authentication" });
+                }
+
                 var enrollment = await _enrollmentService.EnrollInCourseAsync(userId, enrollRequest.CourseId);
                 return CreatedAtAction(nameof(GetUserEnrollments), new { userId }, enrollment);
             }
@@ -71,7 +81,7 @@ namespace ELearning.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { message = "An error occurred while enrolling in the course. Please try again." });
             }
         }
 

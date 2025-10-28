@@ -51,12 +51,27 @@ const CourseDetail = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
     fetchCourseData();
     checkEnrollment();
-  }, [id]);
+  }, [id, user]);
+
+  // Refresh enrollment status when page becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        checkEnrollment();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, id]);
 
   const fetchCourseData = async () => {
     try {
@@ -84,12 +99,24 @@ const CourseDetail = () => {
   };
 
   const checkEnrollment = async () => {
-    if (!user) return;
+    if (!user) {
+      setEnrolled(false);
+      return;
+    }
+    
     try {
-      const response = await axios.get(`http://localhost:5000/api/enrollments/course/${id}`);
+      setEnrollmentLoading(true);
+      const response = await axios.get(`http://localhost:5000/api/enrollments/check?courseId=${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       setEnrolled(response.data.isEnrolled);
     } catch (error) {
       console.error('Error checking enrollment:', error);
+      setEnrolled(false);
+    } finally {
+      setEnrollmentLoading(false);
     }
   };
 
@@ -100,12 +127,27 @@ const CourseDetail = () => {
     }
 
     try {
+      setEnrollmentLoading(true);
       await axios.post('http://localhost:5000/api/enrollments/enroll', {
         courseId: parseInt(id)
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
       });
       setEnrolled(true);
+      // Refresh enrollment status to ensure consistency
+      await checkEnrollment();
     } catch (error) {
       console.error('Error enrolling:', error);
+      // Show error message to user
+      if (error.response?.status === 409) {
+        setEnrolled(true);
+      } else {
+        alert('Failed to enroll in course. Please try again.');
+      }
+    } finally {
+      setEnrollmentLoading(false);
     }
   };
 
@@ -603,8 +645,9 @@ const CourseDetail = () => {
                   fullWidth 
                   size="large"
                   onClick={handleEnroll}
+                  disabled={enrollmentLoading}
                 >
-                  {course.isFree ? 'Enroll for Free' : `Enroll for $${course.price}`}
+                  {enrollmentLoading ? 'Enrolling...' : (course.isFree ? 'Enroll for Free' : `Enroll for $${course.price}`)}
                 </Button>
               )}
             </CardActions>

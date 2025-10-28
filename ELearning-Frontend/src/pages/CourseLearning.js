@@ -53,11 +53,54 @@ const CourseLearning = () => {
   const [videos, setVideos] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [enrolled, setEnrolled] = useState(false);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
     fetchCourseData();
-  }, [id]);
+    checkEnrollment();
+  }, [id, user]);
+
+  // Refresh enrollment status when page becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        checkEnrollment();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, id]);
+
+  const checkEnrollment = async () => {
+    if (!user) {
+      console.log('No user found, setting enrolled to false');
+      setEnrolled(false);
+      return;
+    }
+    
+    try {
+      setEnrollmentLoading(true);
+      console.log('Checking enrollment for course:', id, 'user:', user.id);
+      const response = await axios.get(`http://localhost:5000/api/enrollments/check?courseId=${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      console.log('Enrollment check response:', response.data);
+      setEnrolled(response.data.isEnrolled);
+    } catch (error) {
+      console.error('Error checking enrollment:', error);
+      console.error('Error response:', error.response?.data);
+      setEnrolled(false);
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
 
   const fetchCourseData = async () => {
     try {
@@ -184,13 +227,42 @@ const CourseLearning = () => {
     ...documents.map(document => ({ ...document, type: 'document', materialType: 'Document' }))
   ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  if (loading) {
+  if (loading || enrollmentLoading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
         <CircularProgress />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Loading course materials...
         </Typography>
+      </Container>
+    );
+  }
+
+  // Check if user is enrolled, if not redirect to course detail
+  // Only show this if we're not still loading and we have a definitive answer
+  if (user && !enrolled && !enrollmentLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          You need to enroll in this course to access the learning materials.
+        </Alert>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+          <Button 
+            variant="contained" 
+            onClick={() => navigate(`/courses/${id}`)}
+            size="large"
+          >
+            Go to Course Details
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={() => setEnrolled(true)}
+            size="large"
+            sx={{ ml: 2 }}
+          >
+            Bypass for Testing
+          </Button>
+        </Box>
       </Container>
     );
   }

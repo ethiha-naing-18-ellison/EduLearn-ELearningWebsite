@@ -59,8 +59,18 @@ namespace ELearning.API.Services
                 Status = EnrollmentStatus.Active
             };
 
-            _context.Enrollments.Add(enrollment);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Enrollments.Add(enrollment);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("duplicate key") == true || 
+                                               ex.InnerException?.Message.Contains("unique constraint") == true ||
+                                               ex.InnerException?.Message.Contains("23505") == true) // PostgreSQL unique violation error code
+            {
+                // Handle unique constraint violation (race condition)
+                throw new InvalidOperationException("User is already enrolled in this course");
+            }
 
             return await GetEnrollmentByIdAsync(enrollment.Id);
         }
