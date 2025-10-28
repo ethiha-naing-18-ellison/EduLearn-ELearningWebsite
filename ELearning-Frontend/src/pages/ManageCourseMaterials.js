@@ -76,6 +76,9 @@ const ManageCourseMaterials = () => {
   const [openQuestionDialog, setOpenQuestionDialog] = useState(false);
   const [questionFormData, setQuestionFormData] = useState({});
   const [editingQuestion, setEditingQuestion] = useState(null);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [viewingItem, setViewingItem] = useState(null);
+  const [viewingType, setViewingType] = useState('');
 
   useEffect(() => {
     fetchCourseData();
@@ -406,6 +409,12 @@ const ManageCourseMaterials = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleView = (item, type) => {
+    setViewingItem(item);
+    setViewingType(type);
+    setOpenViewDialog(true);
   };
 
   const handleSave = async () => {
@@ -754,6 +763,9 @@ const ManageCourseMaterials = () => {
                       }
                     />
                     <ListItemSecondaryAction>
+                      <IconButton onClick={() => handleView(lesson, 'lesson')}>
+                        <Visibility />
+                      </IconButton>
                       <IconButton onClick={() => handleEdit(lesson, 'lesson')}>
                         <Edit />
                       </IconButton>
@@ -809,7 +821,7 @@ const ManageCourseMaterials = () => {
                       }
                     />
                     <ListItemSecondaryAction>
-                      <IconButton onClick={() => navigate(`/assignment-submissions/${assignment.id}`)}>
+                      <IconButton onClick={() => handleView(assignment, 'assignment')}>
                         <Visibility />
                       </IconButton>
                       <IconButton onClick={() => handleEdit(assignment, 'assignment')}>
@@ -865,6 +877,9 @@ const ManageCourseMaterials = () => {
                       }
                     />
                     <ListItemSecondaryAction>
+                      <IconButton onClick={() => handleView(quiz, 'quiz')}>
+                        <Visibility />
+                      </IconButton>
                       <Button
                         size="small"
                         variant="outlined"
@@ -925,6 +940,9 @@ const ManageCourseMaterials = () => {
                       }
                     />
                     <ListItemSecondaryAction>
+                      <IconButton onClick={() => handleView(video, 'video')}>
+                        <Visibility />
+                      </IconButton>
                       <IconButton onClick={() => handleEdit(video, 'video')}>
                         <Edit />
                       </IconButton>
@@ -978,6 +996,9 @@ const ManageCourseMaterials = () => {
                       }
                     />
                     <ListItemSecondaryAction>
+                      <IconButton onClick={() => handleView(document, 'document')}>
+                        <Visibility />
+                      </IconButton>
                       <IconButton onClick={() => handleEdit(document, 'document')}>
                         <Edit />
                       </IconButton>
@@ -1847,6 +1868,353 @@ const ManageCourseMaterials = () => {
             startIcon={saving ? <CircularProgress size={20} /> : null}
           >
             {saving ? 'Saving...' : (editingQuestion ? 'Update Question' : 'Create Question')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Content Dialog */}
+      <Dialog 
+        open={openViewDialog} 
+        onClose={() => setOpenViewDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          View {viewingType?.charAt(0).toUpperCase() + viewingType?.slice(1)} - {viewingItem?.title}
+        </DialogTitle>
+        <DialogContent>
+          {viewingItem && (
+            <Box>
+              {/* Common fields for all types */}
+              <Typography variant="h6" gutterBottom>
+                {viewingItem.title}
+              </Typography>
+              
+              {viewingItem.description && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Description:
+                  </Typography>
+                  <Typography variant="body1">
+                    {viewingItem.description}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Type-specific content */}
+              {viewingType === 'lesson' && (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Content:
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                    {viewingItem.content}
+                  </Typography>
+                  
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Duration: {viewingItem.duration} minutes
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Type: {viewingItem.type}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Order: {viewingItem.order}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Free: {viewingItem.isFree ? 'Yes' : 'No'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {viewingType === 'assignment' && (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Instructions:
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                    {viewingItem.instructions}
+                  </Typography>
+                  
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Max Points: {viewingItem.maxPoints}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Type: {viewingItem.type}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Due Date: {new Date(viewingItem.dueDate).toLocaleString()}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Late Submission: {viewingItem.allowLateSubmission ? 'Allowed' : 'Not Allowed'}
+                      </Typography>
+                    </Grid>
+                    {viewingItem.allowLateSubmission && (
+                      <Grid item xs={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Late Penalty: {viewingItem.latePenaltyPercentage}%
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              )}
+
+              {viewingType === 'quiz' && (
+                <Box>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Time Limit: {viewingItem.timeLimit} minutes
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Max Attempts: {viewingItem.maxAttempts}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Passing Score: {viewingItem.passingScore}%
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Questions: {viewingItem.totalQuestions}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Randomized: {viewingItem.isRandomized ? 'Yes' : 'No'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Show Answers: {viewingItem.showCorrectAnswers ? 'Yes' : 'No'}
+                      </Typography>
+                    </Grid>
+                    {viewingItem.availableFrom && (
+                      <Grid item xs={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Available From: {new Date(viewingItem.availableFrom).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {viewingItem.availableUntil && (
+                      <Grid item xs={6}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Available Until: {new Date(viewingItem.availableUntil).toLocaleString()}
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              )}
+
+              {viewingType === 'video' && (
+                <Box>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Duration: {Math.floor(viewingItem.duration / 60)}:{(viewingItem.duration % 60).toString().padStart(2, '0')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Type: {viewingItem.videoType}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Quality: {viewingItem.quality}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Order: {viewingItem.order}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Free: {viewingItem.isFree ? 'Yes' : 'No'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Published: {viewingItem.isPublished ? 'Yes' : 'No'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  
+                  {viewingItem.videoUrl && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Video URL:
+                      </Typography>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                        {viewingItem.videoUrl}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {viewingItem.transcript && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Transcript:
+                      </Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {viewingItem.transcript}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {viewingItem.notes && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Notes:
+                      </Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {viewingItem.notes}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {viewingType === 'document' && (
+                <Box>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Type: {viewingItem.documentType}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Format: {viewingItem.fileFormat}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        File Size: {(viewingItem.fileSize / 1024 / 1024).toFixed(1)} MB
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Pages: {viewingItem.pageCount || 'N/A'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Version: {viewingItem.version}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Language: {viewingItem.language}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Free: {viewingItem.isFree ? 'Yes' : 'No'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Published: {viewingItem.isPublished ? 'Yes' : 'No'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  
+                  {viewingItem.documentUrl && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Document URL:
+                      </Typography>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                        {viewingItem.documentUrl}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {viewingItem.keywords && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Keywords:
+                      </Typography>
+                      <Typography variant="body1">
+                        {viewingItem.keywords}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {viewingItem.summary && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Summary:
+                      </Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {viewingItem.summary}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {viewingItem.notes && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Notes:
+                      </Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {viewingItem.notes}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenViewDialog(false)}>
+            Close
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<Edit />}
+            onClick={() => {
+              setOpenViewDialog(false);
+              handleEdit(viewingItem, viewingType);
+            }}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<Delete />}
+            onClick={() => {
+              setOpenViewDialog(false);
+              handleDelete(viewingItem, viewingType);
+            }}
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
