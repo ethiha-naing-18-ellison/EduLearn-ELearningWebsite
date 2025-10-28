@@ -18,7 +18,9 @@ import {
   Rating,
   Pagination,
   CircularProgress,
-  IconButton
+  IconButton,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Search,
@@ -28,7 +30,9 @@ import {
   Schedule,
   Edit,
   Delete,
-  Visibility
+  Visibility,
+  School,
+  MenuBook
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,12 +42,14 @@ const MyCourses = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [activeTab, setActiveTab] = useState(0);
 
   const fetchMyCourses = useCallback(async () => {
     try {
@@ -72,9 +78,24 @@ const MyCourses = () => {
     }
   }, [page, searchTerm, levelFilter, categoryFilter, user.id]);
 
+  const fetchEnrolledCourses = useCallback(async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/enrollments', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      setEnrolledCourses(response.data);
+    } catch (error) {
+      console.error('Error fetching enrolled courses:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchMyCourses();
-  }, [fetchMyCourses]);
+    fetchEnrolledCourses();
+  }, [fetchMyCourses, fetchEnrolledCourses]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -138,8 +159,24 @@ const MyCourses = () => {
           My Courses
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Manage and view all the courses you've created
+          Manage and view all the courses you've created and enrolled in
         </Typography>
+      </Box>
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Tab 
+            label="Created Courses" 
+            icon={<Edit />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="Enrolled Courses" 
+            icon={<School />} 
+            iconPosition="start"
+          />
+        </Tabs>
       </Box>
 
       {/* Search and Filters */}
@@ -208,8 +245,9 @@ const MyCourses = () => {
       </Card>
 
       {/* Courses Grid */}
-      <Grid container spacing={3}>
-        {courses.map((course) => (
+      {activeTab === 0 && (
+        <Grid container spacing={3}>
+          {courses.map((course) => (
           <Grid item xs={12} sm={6} md={4} key={course.id}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardMedia
@@ -305,11 +343,96 @@ const MyCourses = () => {
               </CardActions>
             </Card>
           </Grid>
-        ))}
-      </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Enrolled Courses Grid */}
+      {activeTab === 1 && (
+        <Grid container spacing={3}>
+          {enrolledCourses.map((enrollment) => (
+            <Grid item xs={12} sm={6} md={4} key={enrollment.id}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardMedia
+                  component="img"
+                  height="200"
+                  image={enrollment.course?.thumbnail || 'https://via.placeholder.com/300x200?text=Course+Image'}
+                  alt={enrollment.course?.title}
+                  sx={{ objectFit: 'cover' }}
+                />
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Chip 
+                      label={enrollment.course?.level} 
+                      color={getLevelColor(enrollment.course?.level)}
+                      size="small" 
+                    />
+                    <Typography variant="h6" color="primary">
+                      {enrollment.course?.isFree ? 'Free' : `$${enrollment.course?.price}`}
+                    </Typography>
+                  </Box>
+                  
+                  <Typography variant="h6" component="h3" gutterBottom>
+                    {enrollment.course?.title}
+                  </Typography>
+                  
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    by {enrollment.course?.instructor?.firstName} {enrollment.course?.instructor?.lastName}
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Rating value={4.8} precision={0.1} size="small" readOnly />
+                    <Typography variant="body2" sx={{ ml: 1 }}>
+                      4.8 (1,250)
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <People sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        1,250 students
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Schedule sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {enrollment.course?.duration}h
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    {enrollment.course?.description}
+                  </Typography>
+                </CardContent>
+                
+                <CardActions sx={{ p: 2, flexDirection: 'column', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    startIcon={<Visibility />}
+                    onClick={() => navigate(`/courses/${enrollment.course?.id}`)}
+                  >
+                    View Course
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<MenuBook />}
+                    onClick={() => navigate(`/course-learning/${enrollment.course?.id}`)}
+                  >
+                    Go to Course
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {activeTab === 0 && totalPages > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <Pagination
             count={totalPages}
@@ -320,7 +443,7 @@ const MyCourses = () => {
         </Box>
       )}
 
-      {courses.length === 0 && !loading && (
+      {activeTab === 0 && courses.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h5" color="text.secondary">
             No courses found
@@ -334,6 +457,24 @@ const MyCourses = () => {
             onClick={() => navigate('/create-course')}
           >
             Create Your First Course
+          </Button>
+        </Box>
+      )}
+
+      {activeTab === 1 && enrolledCourses.length === 0 && !loading && (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h5" color="text.secondary">
+            No enrolled courses
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+            You haven't enrolled in any courses yet. Browse available courses to get started!
+          </Typography>
+          <Button
+            variant="contained"
+            sx={{ mt: 2 }}
+            onClick={() => navigate('/courses')}
+          >
+            Browse Courses
           </Button>
         </Box>
       )}

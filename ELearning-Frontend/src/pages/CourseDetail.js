@@ -584,9 +584,19 @@ const CourseDetail = () => {
                   </Button>
                 </Box>
               ) : enrolled ? (
-                <Button variant="contained" fullWidth size="large">
-                  Continue Learning
-                </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
+                  <Button variant="contained" fullWidth size="large">
+                    Continue Learning
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth 
+                    size="large"
+                    onClick={() => navigate(`/course-learning/${course.id}`)}
+                  >
+                    Go to Course
+                  </Button>
+                </Box>
               ) : (
                 <Button 
                   variant="contained" 

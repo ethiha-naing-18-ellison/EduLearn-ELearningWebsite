@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Courses from './pages/Courses';
 import MyCourses from './pages/MyCourses';
 import CourseDetail from './pages/CourseDetail';
+import CourseLearning from './pages/CourseLearning';
 import CreateCourse from './pages/CreateCourse';
 import EditCourse from './pages/EditCourse';
 import ManageCourseMaterials from './pages/ManageCourseMaterials';
@@ -54,6 +55,14 @@ function App() {
               } 
             />
             <Route path="/courses/:id" element={<CourseDetail />} />
+            <Route 
+              path="/course-learning/:id" 
+              element={
+                <ProtectedRoute>
+                  <CourseLearning />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/create-course" 
               element={
