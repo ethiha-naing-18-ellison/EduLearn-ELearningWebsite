@@ -32,7 +32,8 @@ import {
   Quiz,
   CheckCircle,
   Lock,
-  VideoLibrary
+  VideoLibrary,
+  Description
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,6 +48,7 @@ const CourseDetail = () => {
   const [assignments, setAssignments] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const [tabValue, setTabValue] = useState(0);
@@ -59,12 +61,13 @@ const CourseDetail = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes] = await Promise.all([
+      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes, documentsRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/courses/${id}`),
         axios.get(`http://localhost:5000/api/lessons/course/${id}`),
         axios.get(`http://localhost:5000/api/assignments/course/${id}`),
         axios.get(`http://localhost:5000/api/quizzes/course/${id}`),
-        axios.get(`http://localhost:5000/api/videos/course/${id}`)
+        axios.get(`http://localhost:5000/api/videos/course/${id}`),
+        axios.get(`http://localhost:5000/api/documents/course/${id}`)
       ]);
       
       setCourse(courseRes.data);
@@ -72,6 +75,7 @@ const CourseDetail = () => {
       setAssignments(assignmentsRes.data);
       setQuizzes(quizzesRes.data);
       setVideos(videosRes.data);
+      setDocuments(documentsRes.data);
     } catch (error) {
       console.error('Error fetching course data:', error);
     } finally {
@@ -167,6 +171,28 @@ const CourseDetail = () => {
         return <VideoLibrary color="default" />;
       default:
         return <VideoLibrary color="primary" />;
+    }
+  };
+
+  const getDocumentTypeIcon = (documentType) => {
+    switch (documentType) {
+      case 'PDF':
+        return <Description color="error" />;
+      case 'DOC':
+      case 'DOCX':
+        return <Description color="primary" />;
+      case 'PPT':
+      case 'PPTX':
+        return <Description color="warning" />;
+      case 'XLS':
+      case 'XLSX':
+        return <Description color="success" />;
+      case 'TXT':
+        return <Description color="default" />;
+      case 'HTML':
+        return <Description color="info" />;
+      default:
+        return <Description color="primary" />;
     }
   };
 
@@ -365,8 +391,45 @@ const CourseDetail = () => {
                       </ListItem>
                     ))}
                     
+                    {/* Display documents */}
+                    {documents.map((document, index) => (
+                      <ListItem key={`document-${document.id}`} sx={{ px: 0 }}>
+                        <ListItemIcon>
+                          {getDocumentTypeIcon(document.documentType)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={document.title}
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Document - {document.documentType}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {(document.fileSize / 1024 / 1024).toFixed(1)} MB
+                              </Typography>
+                              {document.pageCount > 0 && (
+                                <Typography variant="body2" color="text.secondary">
+                                  {document.pageCount} pages
+                                </Typography>
+                              )}
+                              {document.isFree && (
+                                <Chip label="Free" size="small" color="success" />
+                              )}
+                            </Box>
+                          }
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {enrolled ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <Lock color="disabled" />
+                          )}
+                        </Box>
+                      </ListItem>
+                    ))}
+                    
                     {/* Show message if no content */}
-                    {sortedLessons.length === 0 && assignments.length === 0 && quizzes.length === 0 && videos.length === 0 && (
+                    {sortedLessons.length === 0 && assignments.length === 0 && quizzes.length === 0 && videos.length === 0 && documents.length === 0 && (
                       <ListItem sx={{ px: 0 }}>
                         <ListItemText
                           primary="No course content available yet"
@@ -489,6 +552,12 @@ const CourseDetail = () => {
                       <VideoLibrary color="success" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
                     <ListItemText primary={`${videos.length} videos`} />
+                  </ListItem>
+                  <ListItem sx={{ px: 0 }}>
+                    <ListItemIcon>
+                      <Description color="info" sx={{ fontSize: 20 }} />
+                    </ListItemIcon>
+                    <ListItemText primary={`${documents.length} documents`} />
                   </ListItem>
                 </List>
               </Box>

@@ -45,10 +45,6 @@ const MyCourses = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchMyCourses();
-  }, [page, searchTerm, levelFilter, categoryFilter, fetchMyCourses]);
-
   const fetchMyCourses = useCallback(async () => {
     try {
       setLoading(true);
@@ -75,6 +71,10 @@ const MyCourses = () => {
       setLoading(false);
     }
   }, [page, searchTerm, levelFilter, categoryFilter, user.id]);
+
+  useEffect(() => {
+    fetchMyCourses();
+  }, [fetchMyCourses]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);

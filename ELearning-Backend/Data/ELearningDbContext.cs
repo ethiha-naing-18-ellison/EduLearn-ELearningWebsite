@@ -20,6 +20,7 @@ namespace ELearning.API.Data
         public DbSet<QuizQuestion> QuizQuestions { get; set; }
         public DbSet<QuizAttempt> QuizAttempts { get; set; }
         public DbSet<Video> Videos { get; set; }
+        public DbSet<Document> Documents { get; set; }
         public DbSet<Progress> Progress { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
 
@@ -177,6 +178,26 @@ namespace ELearning.API.Data
                 entity.Property(e => e.Quality).HasConversion<string>();
                 entity.HasOne(e => e.Course)
                       .WithMany(c => c.Videos)
+                      .HasForeignKey(e => e.CourseId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Document configuration
+            modelBuilder.Entity<Document>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).IsRequired();
+                entity.Property(e => e.DocumentUrl).HasMaxLength(500);
+                entity.Property(e => e.DocumentFile).HasMaxLength(500);
+                entity.Property(e => e.Thumbnail).HasMaxLength(500);
+                entity.Property(e => e.DocumentType).HasConversion<string>();
+                entity.Property(e => e.FileFormat).HasMaxLength(10);
+                entity.Property(e => e.Version).HasMaxLength(20);
+                entity.Property(e => e.Language).HasMaxLength(10);
+                entity.Property(e => e.FileSize).HasColumnType("bigint");
+                entity.HasOne(e => e.Course)
+                      .WithMany(c => c.Documents)
                       .HasForeignKey(e => e.CourseId)
                       .OnDelete(DeleteBehavior.Cascade);
             });

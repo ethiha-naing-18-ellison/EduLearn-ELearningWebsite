@@ -39,7 +39,9 @@ import {
   Schedule,
   Grade,
   Visibility,
-  VideoLibrary
+  VideoLibrary,
+  Description,
+  CloudUpload
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,6 +56,7 @@ const ManageCourseMaterials = () => {
   const [assignments, setAssignments] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
@@ -62,6 +65,9 @@ const ManageCourseMaterials = () => {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [selectedVideoFile, setSelectedVideoFile] = useState(null);
+  const [selectedDocumentFile, setSelectedDocumentFile] = useState(null);
+  const [selectedThumbnailFile, setSelectedThumbnailFile] = useState(null);
 
   useEffect(() => {
     fetchCourseData();
@@ -70,12 +76,13 @@ const ManageCourseMaterials = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes] = await Promise.all([
+      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes, documentsRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/courses/${id}`),
         axios.get(`http://localhost:5000/api/lessons/course/${id}`),
         axios.get(`http://localhost:5000/api/assignments/course/${id}`),
         axios.get(`http://localhost:5000/api/quizzes/course/${id}`),
-        axios.get(`http://localhost:5000/api/videos/course/${id}`)
+        axios.get(`http://localhost:5000/api/videos/course/${id}`),
+        axios.get(`http://localhost:5000/api/documents/course/${id}`)
       ]);
       
       setCourse(courseRes.data);
@@ -83,6 +90,7 @@ const ManageCourseMaterials = () => {
       setAssignments(assignmentsRes.data);
       setQuizzes(quizzesRes.data);
       setVideos(videosRes.data);
+      setDocuments(documentsRes.data);
     } catch (error) {
       console.error('Error fetching course data:', error);
       setMessage('Error loading course materials');
@@ -98,11 +106,15 @@ const ManageCourseMaterials = () => {
   const handleAddNew = (type) => {
     setDialogType(type);
     setEditingItem(null);
+    // Clear file selections
+    setSelectedVideoFile(null);
+    setSelectedDocumentFile(null);
+    setSelectedThumbnailFile(null);
     
     if (type === 'lesson') {
-      setFormData({
-        title: '',
-        description: '',
+    setFormData({
+      title: '',
+      description: '',
         content: '',
         courseId: parseInt(id),
         duration: 30,
@@ -146,6 +158,27 @@ const ManageCourseMaterials = () => {
         quality: 'HD',
         transcript: '',
         notes: '',
+      courseId: parseInt(id)
+    });
+    } else if (type === 'document') {
+      setFormData({
+        title: '',
+        description: '',
+        documentUrl: '',
+        documentFile: '',
+        thumbnail: '',
+        fileSize: 0,
+        pageCount: 0,
+        order: documents.length + 1,
+        isFree: false,
+        isPublished: true,
+        documentType: 'PDF',
+        fileFormat: 'PDF',
+        version: '1.0',
+        language: 'en',
+        keywords: '',
+        summary: '',
+        notes: '',
         courseId: parseInt(id)
       });
     }
@@ -156,19 +189,23 @@ const ManageCourseMaterials = () => {
   const handleEdit = (item, type) => {
     setDialogType(type);
     setEditingItem(item);
+    // Clear file selections
+    setSelectedVideoFile(null);
+    setSelectedDocumentFile(null);
+    setSelectedThumbnailFile(null);
     
     if (type === 'lesson') {
-      setFormData({
-        title: item.title,
-        description: item.description,
+    setFormData({
+      title: item.title,
+      description: item.description,
         content: item.content || '',
         courseId: parseInt(id),
         duration: item.duration || 30,
         order: item.order || 1,
         isFree: item.isFree || false,
         type: item.type || 'Video',
-        ...item
-      });
+      ...item
+    });
     } else if (type === 'assignment') {
       setFormData({
         title: item.title,
@@ -210,6 +247,28 @@ const ManageCourseMaterials = () => {
         courseId: parseInt(id),
         ...item
       });
+    } else if (type === 'document') {
+      setFormData({
+        title: item.title,
+        description: item.description,
+        documentUrl: item.documentUrl || '',
+        documentFile: item.documentFile || '',
+        thumbnail: item.thumbnail || '',
+        fileSize: item.fileSize || 0,
+        pageCount: item.pageCount || 0,
+        order: item.order || 1,
+        isFree: item.isFree || false,
+        isPublished: item.isPublished !== undefined ? item.isPublished : true,
+        documentType: item.documentType || 'PDF',
+        fileFormat: item.fileFormat || 'PDF',
+        version: item.version || '1.0',
+        language: item.language || 'en',
+        keywords: item.keywords || '',
+        summary: item.summary || '',
+        notes: item.notes || '',
+        courseId: parseInt(id),
+        ...item
+      });
     }
     
     setOpenDialog(true);
@@ -221,7 +280,8 @@ const ManageCourseMaterials = () => {
     try {
       const endpoint = type === 'lesson' ? 'lessons' : 
                      type === 'assignment' ? 'assignments' : 
-                     type === 'quiz' ? 'quizzes' : 'videos';
+                     type === 'quiz' ? 'quizzes' : 
+                     type === 'video' ? 'videos' : 'documents';
       await axios.delete(`http://localhost:5000/api/${endpoint}/${item.id}`);
       setMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
       fetchCourseData();
@@ -238,7 +298,30 @@ const ManageCourseMaterials = () => {
     try {
       const endpoint = dialogType === 'lesson' ? 'lessons' : 
                      dialogType === 'assignment' ? 'assignments' : 
-                     dialogType === 'quiz' ? 'quizzes' : 'videos';
+                     dialogType === 'quiz' ? 'quizzes' : 
+                     dialogType === 'video' ? 'videos' : 'documents';
+
+      // Handle file uploads if files are selected
+      if (dialogType === 'video' && selectedVideoFile) {
+        // For now, we'll just use the file name
+        // In a real implementation, you'd upload the file to a server
+        requestData.videoFile = selectedVideoFile.name;
+        requestData.videoUrl = ''; // Clear URL when file is uploaded
+      }
+      
+      if (dialogType === 'document' && selectedDocumentFile) {
+        // For now, we'll just use the file name and size
+        // In a real implementation, you'd upload the file to a server
+        requestData.documentFile = selectedDocumentFile.name;
+        requestData.documentUrl = ''; // Clear URL when file is uploaded
+        requestData.fileSize = selectedDocumentFile.size;
+      }
+      
+      if ((dialogType === 'video' || dialogType === 'document') && selectedThumbnailFile) {
+        // For now, we'll just use the file name
+        // In a real implementation, you'd upload the file to a server
+        requestData.thumbnail = selectedThumbnailFile.name;
+      }
       
       // Prepare the data based on the type
       
@@ -355,6 +438,42 @@ const ManageCourseMaterials = () => {
           setMessage('Either video URL or video file is required');
           return;
         }
+      } else if (dialogType === 'document') {
+        // Ensure all required fields are present for documents
+        requestData = {
+          title: formData.title || 'Untitled Document',
+          description: formData.description || 'No description provided',
+          documentUrl: formData.documentUrl || '',
+          documentFile: formData.documentFile || '',
+          thumbnail: formData.thumbnail || '',
+          fileSize: formData.fileSize || 0,
+          pageCount: formData.pageCount || 0,
+          order: formData.order || 1,
+          isFree: formData.isFree || false,
+          isPublished: formData.isPublished !== undefined ? formData.isPublished : true,
+          documentType: formData.documentType || 'PDF',
+          fileFormat: formData.fileFormat || 'PDF',
+          version: formData.version || '1.0',
+          language: formData.language || 'en',
+          keywords: formData.keywords || '',
+          summary: formData.summary || '',
+          notes: formData.notes || '',
+          courseId: formData.courseId
+        };
+        
+        // Validate required fields
+        if (!requestData.title.trim()) {
+          setMessage('Title is required for documents');
+          return;
+        }
+        if (!requestData.description.trim()) {
+          setMessage('Description is required for documents');
+          return;
+        }
+        if (!requestData.documentUrl && !requestData.documentFile) {
+          setMessage('Either document URL or document file is required');
+          return;
+        }
       }
       
       if (editingItem) {
@@ -396,6 +515,46 @@ const ManageCourseMaterials = () => {
     }));
   };
 
+  const handleFileUpload = (file, type) => {
+    if (type === 'video') {
+      setSelectedVideoFile(file);
+      setFormData(prev => ({
+        ...prev,
+        videoFile: file.name,
+        videoUrl: '' // Clear URL when file is selected
+      }));
+    } else if (type === 'document') {
+      setSelectedDocumentFile(file);
+      setFormData(prev => ({
+        ...prev,
+        documentFile: file.name,
+        documentUrl: '', // Clear URL when file is selected
+        fileSize: file.size
+      }));
+    } else if (type === 'thumbnail') {
+      setSelectedThumbnailFile(file);
+      setFormData(prev => ({
+        ...prev,
+        thumbnail: file.name
+      }));
+    }
+  };
+
+  const handleFileInputChange = (event, type) => {
+    const file = event.target.files[0];
+    if (file) {
+      handleFileUpload(file, type);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
@@ -431,6 +590,7 @@ const ManageCourseMaterials = () => {
             <Tab label={`Assignments (${assignments.length})`} />
             <Tab label={`Quizzes (${quizzes.length})`} />
             <Tab label={`Videos (${videos.length})`} />
+            <Tab label={`Documents (${documents.length})`} />
           </Tabs>
         </Box>
 
@@ -649,6 +809,59 @@ const ManageCourseMaterials = () => {
               </List>
             </Box>
           )}
+
+          {/* Documents Tab */}
+          {tabValue === 4 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Course Documents</Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => handleAddNew('document')}
+                >
+                  Add Document
+                </Button>
+              </Box>
+              <List>
+                {documents.map((document) => (
+                  <ListItem key={document.id} divider>
+                    <ListItemText
+                      primary={document.title}
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {document.description}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <Chip label={document.documentType} size="small" />
+                            <Chip label={document.fileFormat} size="small" />
+                            <Chip label={`${(document.fileSize / 1024 / 1024).toFixed(1)} MB`} size="small" />
+                            {document.pageCount > 0 && <Chip label={`${document.pageCount} pages`} size="small" />}
+                            {document.isFree && <Chip label="Free" size="small" color="success" />}
+                            {!document.isPublished && <Chip label="Draft" size="small" color="warning" />}
+                          </Box>
+                        </Box>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton onClick={() => handleEdit(document, 'document')}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton onClick={() => handleDelete(document, 'document')}>
+                        <Delete />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+                {documents.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                    No documents added yet. Click "Add Document" to get started.
+                  </Typography>
+                )}
+              </List>
+            </Box>
+          )}
         </CardContent>
       </Card>
 
@@ -821,30 +1034,108 @@ const ManageCourseMaterials = () => {
 
             {dialogType === 'video' && (
               <>
-                <TextField
-                  fullWidth
-                  label="Video URL"
-                  value={formData.videoUrl || ''}
-                  onChange={(e) => handleFormChange('videoUrl', e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Video File Path"
-                  value={formData.videoFile || ''}
-                  onChange={(e) => handleFormChange('videoFile', e.target.value)}
-                  placeholder="/uploads/videos/video.mp4"
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  fullWidth
-                  label="Thumbnail URL"
-                  value={formData.thumbnail || ''}
-                  onChange={(e) => handleFormChange('thumbnail', e.target.value)}
-                  placeholder="https://example.com/thumbnail.jpg"
-                  sx={{ mb: 2 }}
-                />
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Video Source (Choose one):
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Video URL"
+                    value={formData.videoUrl || ''}
+                    onChange={(e) => {
+                      handleFormChange('videoUrl', e.target.value);
+                      if (e.target.value) {
+                        setSelectedVideoFile(null);
+                        setFormData(prev => ({ ...prev, videoFile: '' }));
+                      }
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    sx={{ mb: 2 }}
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUpload />}
+                      sx={{ minWidth: 200 }}
+                    >
+                      Upload Video File
+                      <input
+                        type="file"
+                        hidden
+                        accept="video/*"
+                        onChange={(e) => handleFileInputChange(e, 'video')}
+                      />
+                    </Button>
+                    {selectedVideoFile && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="success.main">
+                          ✓ Selected: {selectedVideoFile.name}
+                        </Typography>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedVideoFile(null);
+                            setFormData(prev => ({ ...prev, videoFile: '' }));
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Thumbnail:
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Thumbnail URL"
+                    value={formData.thumbnail || ''}
+                    onChange={(e) => {
+                      handleFormChange('thumbnail', e.target.value);
+                      if (e.target.value) {
+                        setSelectedThumbnailFile(null);
+                      }
+                    }}
+                    placeholder="https://example.com/thumbnail.jpg"
+                    sx={{ mb: 2 }}
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUpload />}
+                      sx={{ minWidth: 200 }}
+                    >
+                      Upload Thumbnail
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={(e) => handleFileInputChange(e, 'thumbnail')}
+                      />
+                    </Button>
+                    {selectedThumbnailFile && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="success.main">
+                          ✓ Selected: {selectedThumbnailFile.name}
+                        </Typography>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedThumbnailFile(null);
+                            setFormData(prev => ({ ...prev, thumbnail: '' }));
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
                 <TextField
                   fullWidth
                   label="Duration (seconds)"
@@ -917,6 +1208,231 @@ const ManageCourseMaterials = () => {
                   multiline
                   rows={3}
                   placeholder="Video transcript or subtitles..."
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Instructor Notes"
+                  value={formData.notes || ''}
+                  onChange={(e) => handleFormChange('notes', e.target.value)}
+                  multiline
+                  rows={2}
+                  placeholder="Private notes for instructors..."
+                  sx={{ mb: 2 }}
+                />
+              </>
+            )}
+
+            {dialogType === 'document' && (
+              <>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Document Source (Choose one):
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Document URL"
+                    value={formData.documentUrl || ''}
+                    onChange={(e) => {
+                      handleFormChange('documentUrl', e.target.value);
+                      if (e.target.value) {
+                        setSelectedDocumentFile(null);
+                        setFormData(prev => ({ ...prev, documentFile: '' }));
+                      }
+                    }}
+                    placeholder="https://example.com/documents/document.pdf"
+                    sx={{ mb: 2 }}
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUpload />}
+                      sx={{ minWidth: 200 }}
+                    >
+                      Upload Document
+                      <input
+                        type="file"
+                        hidden
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.rtf,.html"
+                        onChange={(e) => handleFileInputChange(e, 'document')}
+                      />
+                    </Button>
+                    {selectedDocumentFile && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="success.main">
+                          ✓ Selected: {selectedDocumentFile.name} ({formatFileSize(selectedDocumentFile.size)})
+                        </Typography>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedDocumentFile(null);
+                            setFormData(prev => ({ ...prev, documentFile: '', fileSize: 0 }));
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Thumbnail/Preview:
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label="Thumbnail URL"
+                    value={formData.thumbnail || ''}
+                    onChange={(e) => {
+                      handleFormChange('thumbnail', e.target.value);
+                      if (e.target.value) {
+                        setSelectedThumbnailFile(null);
+                      }
+                    }}
+                    placeholder="https://example.com/thumbnails/document.jpg"
+                    sx={{ mb: 2 }}
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={<CloudUpload />}
+                      sx={{ minWidth: 200 }}
+                    >
+                      Upload Thumbnail
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={(e) => handleFileInputChange(e, 'thumbnail')}
+                      />
+                    </Button>
+                    {selectedThumbnailFile && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="success.main">
+                          ✓ Selected: {selectedThumbnailFile.name}
+                        </Typography>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedThumbnailFile(null);
+                            setFormData(prev => ({ ...prev, thumbnail: '' }));
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                <TextField
+                  fullWidth
+                  label="File Size (bytes)"
+                  type="number"
+                  value={formData.fileSize || ''}
+                  onChange={(e) => handleFormChange('fileSize', parseInt(e.target.value))}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Page Count"
+                  type="number"
+                  value={formData.pageCount || ''}
+                  onChange={(e) => handleFormChange('pageCount', parseInt(e.target.value))}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Order"
+                  type="number"
+                  value={formData.order || ''}
+                  onChange={(e) => handleFormChange('order', parseInt(e.target.value))}
+                  sx={{ mb: 2 }}
+                />
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Document Type</InputLabel>
+                  <Select
+                    value={formData.documentType || 'PDF'}
+                    onChange={(e) => handleFormChange('documentType', e.target.value)}
+                    label="Document Type"
+                  >
+                    <MenuItem value="PDF">PDF</MenuItem>
+                    <MenuItem value="DOC">DOC</MenuItem>
+                    <MenuItem value="DOCX">DOCX</MenuItem>
+                    <MenuItem value="PPT">PPT</MenuItem>
+                    <MenuItem value="PPTX">PPTX</MenuItem>
+                    <MenuItem value="XLS">XLS</MenuItem>
+                    <MenuItem value="XLSX">XLSX</MenuItem>
+                    <MenuItem value="TXT">TXT</MenuItem>
+                    <MenuItem value="RTF">RTF</MenuItem>
+                    <MenuItem value="HTML">HTML</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  label="File Format"
+                  value={formData.fileFormat || ''}
+                  onChange={(e) => handleFormChange('fileFormat', e.target.value)}
+                  placeholder="PDF, DOCX, etc."
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Version"
+                  value={formData.version || ''}
+                  onChange={(e) => handleFormChange('version', e.target.value)}
+                  placeholder="1.0"
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Language"
+                  value={formData.language || ''}
+                  onChange={(e) => handleFormChange('language', e.target.value)}
+                  placeholder="en"
+                  sx={{ mb: 2 }}
+                />
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Is Free</InputLabel>
+                  <Select
+                    value={formData.isFree ? 'true' : 'false'}
+                    onChange={(e) => handleFormChange('isFree', e.target.value === 'true')}
+                    label="Is Free"
+                  >
+                    <MenuItem value="false">Premium</MenuItem>
+                    <MenuItem value="true">Free</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Is Published</InputLabel>
+                  <Select
+                    value={formData.isPublished ? 'true' : 'false'}
+                    onChange={(e) => handleFormChange('isPublished', e.target.value === 'true')}
+                    label="Is Published"
+                  >
+                    <MenuItem value="true">Published</MenuItem>
+                    <MenuItem value="false">Draft</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Keywords"
+                  value={formData.keywords || ''}
+                  onChange={(e) => handleFormChange('keywords', e.target.value)}
+                  placeholder="web development, programming, tutorial"
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Summary"
+                  value={formData.summary || ''}
+                  onChange={(e) => handleFormChange('summary', e.target.value)}
+                  multiline
+                  rows={3}
+                  placeholder="Brief summary of the document content..."
                   sx={{ mb: 2 }}
                 />
                 <TextField
