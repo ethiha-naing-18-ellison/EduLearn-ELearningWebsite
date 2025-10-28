@@ -87,7 +87,7 @@ const CourseDetail = () => {
     if (!user) return;
     try {
       const response = await axios.get(`http://localhost:5000/api/enrollments/course/${id}`);
-      setEnrolled(response.data.length > 0);
+      setEnrolled(response.data.isEnrolled);
     } catch (error) {
       console.error('Error checking enrollment:', error);
     }
@@ -100,7 +100,7 @@ const CourseDetail = () => {
     }
 
     try {
-      await axios.post('http://localhost:5000/api/enrollments', {
+      await axios.post('http://localhost:5000/api/enrollments/enroll', {
         courseId: parseInt(id)
       });
       setEnrolled(true);

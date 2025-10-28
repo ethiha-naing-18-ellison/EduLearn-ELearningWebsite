@@ -107,6 +107,21 @@ namespace ELearning.API.Controllers
             }
         }
 
+        [HttpGet("course/{courseId}")]
+        public async Task<ActionResult<IEnumerable<EnrollmentDto>>> GetCourseEnrollments(int courseId)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst("userId")?.Value ?? "0");
+                var isEnrolled = await _enrollmentService.IsEnrolledAsync(userId, courseId);
+                return Ok(new { isEnrolled });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPut("status")]
         public async Task<ActionResult<EnrollmentDto>> UpdateEnrollmentStatus([FromBody] UpdateEnrollmentStatusDto updateStatusDto)
         {
