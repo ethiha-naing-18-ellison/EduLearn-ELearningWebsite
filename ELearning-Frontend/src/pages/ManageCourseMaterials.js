@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   CardActions,
+  CardMedia,
   Button,
   Box,
   Tab,
@@ -43,7 +44,8 @@ import {
   Visibility,
   VideoLibrary,
   Description,
-  CloudUpload
+  CloudUpload,
+  MenuBook
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -112,6 +114,20 @@ const ManageCourseMaterials = () => {
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  // Create general materials list (all materials combined)
+  const generalMaterials = [
+    ...lessons.map(lesson => ({ ...lesson, type: 'lesson', materialType: 'Lesson' })),
+    ...assignments.map(assignment => ({ ...assignment, type: 'assignment', materialType: 'Assignment' })),
+    ...quizzes.map(quiz => ({ ...quiz, type: 'quiz', materialType: 'Quiz' })),
+    ...videos.map(video => ({ ...video, type: 'video', materialType: 'Video' })),
+    ...documents.map(document => ({ ...document, type: 'document', materialType: 'Document' }))
+  ].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Handle editing materials from the All tab
+  const handleEditFromAll = (material) => {
+    handleEdit(material.type, material);
   };
 
   const handleAddNew = (type) => {
@@ -699,14 +715,68 @@ const ManageCourseMaterials = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Manage Course Materials
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {course?.title} - Manage lessons, assignments, and quizzes
-        </Typography>
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            {course?.title || 'Manage Course Materials'}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            by {course?.instructor?.firstName} {course?.instructor?.lastName}
+          </Typography>
+        </Box>
       </Box>
+
+      {/* Course Overview Card */}
+      <Card sx={{ mb: 3 }}>
+        <CardMedia
+          component="img"
+          height="200"
+          image={course?.thumbnail || 'https://via.placeholder.com/800x200?text=Course+Image'}
+          alt={course?.title || 'Course Image'}
+        />
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Course Overview
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            {course?.description || 'Manage all course materials including lessons, assignments, quizzes, videos, and documents.'}
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Chip 
+              icon={<MenuBook />} 
+              label={`${lessons.length} Lessons`} 
+              color="primary" 
+              variant="outlined" 
+            />
+            <Chip 
+              icon={<Assignment />} 
+              label={`${assignments.length} Assignments`} 
+              color="secondary" 
+              variant="outlined" 
+            />
+            <Chip 
+              icon={<Quiz />} 
+              label={`${quizzes.length} Quizzes`} 
+              color="info" 
+              variant="outlined" 
+            />
+            <Chip 
+              icon={<VideoLibrary />} 
+              label={`${videos.length} Videos`} 
+              color="success" 
+              variant="outlined" 
+            />
+            <Chip 
+              icon={<Description />} 
+              label={`${documents.length} Documents`} 
+              color="warning" 
+              variant="outlined" 
+            />
+          </Box>
+        </CardContent>
+      </Card>
 
       {message && (
         <Alert severity={message.includes('Error') ? 'error' : 'success'} sx={{ mb: 3 }}>
@@ -716,18 +786,133 @@ const ManageCourseMaterials = () => {
 
       <Card>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab label={`Lessons (${lessons.length})`} />
-            <Tab label={`Assignments (${assignments.length})`} />
-            <Tab label={`Quizzes (${quizzes.length})`} />
-            <Tab label={`Videos (${videos.length})`} />
-            <Tab label={`Documents (${documents.length})`} />
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab 
+              label={`All (${generalMaterials.length})`} 
+              icon={<MenuBook />} 
+              iconPosition="start"
+            />
+            <Tab 
+              label={`Lessons (${lessons.length})`} 
+              icon={<MenuBook />} 
+              iconPosition="start"
+            />
+            <Tab 
+              label={`Assignments (${assignments.length})`} 
+              icon={<Assignment />} 
+              iconPosition="start"
+            />
+            <Tab 
+              label={`Quizzes (${quizzes.length})`} 
+              icon={<Quiz />} 
+              iconPosition="start"
+            />
+            <Tab 
+              label={`Videos (${videos.length})`} 
+              icon={<VideoLibrary />} 
+              iconPosition="start"
+            />
+            <Tab 
+              label={`Documents (${documents.length})`} 
+              icon={<Description />} 
+              iconPosition="start"
+            />
           </Tabs>
         </Box>
 
         <CardContent>
-          {/* Lessons Tab */}
+          {/* All Materials Tab */}
           {tabValue === 0 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                All Course Materials
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Manage all course materials in one place. Click on any item to edit or delete it.
+              </Typography>
+              <List>
+                {generalMaterials.map((material, index) => (
+                  <ListItem key={`${material.type}-${material.id}`} divider>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {material.title}
+                          <Chip 
+                            label={material.materialType} 
+                            size="small" 
+                            color="primary" 
+                            variant="outlined"
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          {material.duration && (
+                            <Typography variant="body2" color="text.secondary">
+                              {material.type === 'video' 
+                                ? `${Math.floor(material.duration / 60)}:${(material.duration % 60).toString().padStart(2, '0')}`
+                                : `${material.duration} min`
+                              }
+                            </Typography>
+                          )}
+                          {material.dueDate && (
+                            <Typography variant="body2" color="text.secondary">
+                              Due: {new Date(material.dueDate).toLocaleDateString()}
+                            </Typography>
+                          )}
+                          {material.totalQuestions && (
+                            <Typography variant="body2" color="text.secondary">
+                              {material.totalQuestions} questions
+                            </Typography>
+                          )}
+                          {material.fileSize && (
+                            <Typography variant="body2" color="text.secondary">
+                              {(material.fileSize / 1024 / 1024).toFixed(1)} MB
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        aria-label="edit"
+                        onClick={() => handleEditFromAll(material)}
+                        sx={{ mr: 1 }}
+                      >
+                        <Edit />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleDelete(material.type, material.id)}
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                ))}
+                
+                {generalMaterials.length === 0 && (
+                  <ListItem>
+                    <ListItemText
+                      primary="No materials available"
+                      secondary="Start by adding lessons, assignments, quizzes, videos, or documents to your course."
+                    />
+                  </ListItem>
+                )}
+              </List>
+            </Box>
+          )}
+
+          {/* Lessons Tab */}
+          {tabValue === 1 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Course Lessons</Typography>
@@ -785,7 +970,7 @@ const ManageCourseMaterials = () => {
           )}
 
           {/* Assignments Tab */}
-          {tabValue === 1 && (
+          {tabValue === 2 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Course Assignments</Typography>
@@ -843,7 +1028,7 @@ const ManageCourseMaterials = () => {
           )}
 
           {/* Quizzes Tab */}
-          {tabValue === 2 && (
+          {tabValue === 3 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Course Quizzes</Typography>
@@ -907,7 +1092,7 @@ const ManageCourseMaterials = () => {
           )}
 
           {/* Videos Tab */}
-          {tabValue === 3 && (
+          {tabValue === 4 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Course Videos</Typography>
@@ -962,7 +1147,7 @@ const ManageCourseMaterials = () => {
           )}
 
           {/* Documents Tab */}
-          {tabValue === 4 && (
+          {tabValue === 5 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">Course Documents</Typography>
