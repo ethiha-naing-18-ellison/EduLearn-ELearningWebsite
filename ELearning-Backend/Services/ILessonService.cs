@@ -34,10 +34,10 @@ namespace ELearning.API.Services
         public string? VideoUrl { get; set; }
         public string? AudioUrl { get; set; }
         public string? DocumentUrl { get; set; }
-        public int Duration { get; set; }
-        public int Order { get; set; }
-        public bool IsFree { get; set; }
-        public string Type { get; set; } = string.Empty;
+        public int Duration { get; set; } = 30;
+        public int Order { get; set; } = 1;
+        public bool IsFree { get; set; } = false;
+        public string Type { get; set; } = "Video";
         public int CourseId { get; set; }
     }
 

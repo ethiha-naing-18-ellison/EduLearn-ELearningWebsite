@@ -53,12 +53,30 @@ namespace ELearning.API.Controllers
         {
             try
             {
+                Console.WriteLine($"AssignmentsController: Received assignment creation request");
+                Console.WriteLine($"Assignment DTO: {System.Text.Json.JsonSerializer.Serialize(createAssignmentDto)}");
+                
+                if (createAssignmentDto == null)
+                {
+                    Console.WriteLine("AssignmentsController: CreateAssignmentDto is null");
+                    return BadRequest(new { message = "Assignment data is required" });
+                }
+                
+                if (createAssignmentDto.CourseId <= 0)
+                {
+                    Console.WriteLine($"AssignmentsController: Invalid CourseId: {createAssignmentDto.CourseId}");
+                    return BadRequest(new { message = "Valid CourseId is required" });
+                }
+                
                 var assignment = await _assignmentService.CreateAssignmentAsync(createAssignmentDto, createAssignmentDto.CourseId);
+                Console.WriteLine($"AssignmentsController: Assignment created successfully with ID: {assignment.Id}");
                 return CreatedAtAction(nameof(GetAssignment), new { id = assignment.Id }, assignment);
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                Console.WriteLine($"AssignmentsController: Error creating assignment: {ex.Message}");
+                Console.WriteLine($"AssignmentsController: Stack trace: {ex.StackTrace}");
+                return BadRequest(new { message = ex.Message, details = ex.StackTrace });
             }
         }
 

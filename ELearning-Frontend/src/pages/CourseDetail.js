@@ -42,21 +42,34 @@ const CourseDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [course, setCourse] = useState(null);
+  const [lessons, setLessons] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
-    fetchCourse();
+    fetchCourseData();
     checkEnrollment();
   }, [id]);
 
-  const fetchCourse = async () => {
+  const fetchCourseData = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/courses/${id}`);
-      setCourse(response.data);
+      setLoading(true);
+      const [courseRes, lessonsRes, assignmentsRes, quizzesRes] = await Promise.all([
+        axios.get(`http://localhost:5000/api/courses/${id}`),
+        axios.get(`http://localhost:5000/api/lessons/course/${id}`),
+        axios.get(`http://localhost:5000/api/assignments/course/${id}`),
+        axios.get(`http://localhost:5000/api/quizzes/course/${id}`)
+      ]);
+      
+      setCourse(courseRes.data);
+      setLessons(lessonsRes.data);
+      setAssignments(assignmentsRes.data);
+      setQuizzes(quizzesRes.data);
     } catch (error) {
-      console.error('Error fetching course:', error);
+      console.error('Error fetching course data:', error);
     } finally {
       setLoading(false);
     }
@@ -118,13 +131,28 @@ const CourseDetail = () => {
     );
   }
 
-  const lessons = [
-    { id: 1, title: 'Introduction to Web Development', duration: '15 min', type: 'video', isFree: true },
-    { id: 2, title: 'HTML Basics', duration: '30 min', type: 'video', isFree: true },
-    { id: 3, title: 'CSS Fundamentals', duration: '45 min', type: 'video', isFree: false },
-    { id: 4, title: 'JavaScript Introduction', duration: '60 min', type: 'video', isFree: false },
-    { id: 5, title: 'Project: Building a Portfolio', duration: '90 min', type: 'assignment', isFree: false }
-  ];
+  // Helper function to get icon based on type
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'Video':
+        return <PlayCircle color="primary" />;
+      case 'Audio':
+        return <PlayCircle color="secondary" />;
+      case 'Assignment':
+        return <Assignment color="secondary" />;
+      case 'Quiz':
+        return <Quiz color="info" />;
+      case 'Document':
+        return <Assignment color="primary" />;
+      case 'Text':
+        return <Assignment color="default" />;
+      default:
+        return <PlayCircle color="primary" />;
+    }
+  };
+
+  // Sort lessons by order
+  const sortedLessons = [...lessons].sort((a, b) => (a.order || 0) - (b.order || 0));
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -199,21 +227,18 @@ const CourseDetail = () => {
                     Course Content
                   </Typography>
                   <List>
-                    {lessons.map((lesson, index) => (
-                      <ListItem key={lesson.id} sx={{ px: 0 }}>
+                    {/* Display lessons */}
+                    {sortedLessons.map((lesson, index) => (
+                      <ListItem key={`lesson-${lesson.id}`} sx={{ px: 0 }}>
                         <ListItemIcon>
-                          {lesson.type === 'video' ? (
-                            <PlayCircle color="primary" />
-                          ) : (
-                            <Assignment color="secondary" />
-                          )}
+                          {getTypeIcon(lesson.type)}
                         </ListItemIcon>
                         <ListItemText
                           primary={lesson.title}
                           secondary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                               <Typography variant="body2" color="text.secondary">
-                                {lesson.duration}
+                                {lesson.duration} min
                               </Typography>
                               {lesson.isFree && (
                                 <Chip label="Free" size="small" color="success" />
@@ -230,6 +255,74 @@ const CourseDetail = () => {
                         </Box>
                       </ListItem>
                     ))}
+                    
+                    {/* Display assignments */}
+                    {assignments.map((assignment, index) => (
+                      <ListItem key={`assignment-${assignment.id}`} sx={{ px: 0 }}>
+                        <ListItemIcon>
+                          <Assignment color="secondary" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={assignment.title}
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Assignment
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {enrolled ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <Lock color="disabled" />
+                          )}
+                        </Box>
+                      </ListItem>
+                    ))}
+                    
+                    {/* Display quizzes */}
+                    {quizzes.map((quiz, index) => (
+                      <ListItem key={`quiz-${quiz.id}`} sx={{ px: 0 }}>
+                        <ListItemIcon>
+                          <Quiz color="info" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={quiz.title}
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Quiz - {quiz.duration} min
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {quiz.totalQuestions} questions
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {enrolled ? (
+                            <CheckCircle color="success" />
+                          ) : (
+                            <Lock color="disabled" />
+                          )}
+                        </Box>
+                      </ListItem>
+                    ))}
+                    
+                    {/* Show message if no content */}
+                    {sortedLessons.length === 0 && assignments.length === 0 && quizzes.length === 0 && (
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemText
+                          primary="No course content available yet"
+                          secondary="The instructor is still working on adding course materials."
+                        />
+                      </ListItem>
+                    )}
                   </List>
                 </Box>
               )}
@@ -326,19 +419,19 @@ const CourseDetail = () => {
                     <ListItemIcon>
                       <PlayCircle color="primary" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary="5 hours on-demand video" />
+                    <ListItemText primary={`${sortedLessons.length} lessons`} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <Assignment color="secondary" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary="3 assignments" />
+                    <ListItemText primary={`${assignments.length} assignments`} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <Quiz color="info" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary="2 quizzes" />
+                    <ListItemText primary={`${quizzes.length} quizzes`} />
                   </ListItem>
                 </List>
               </Box>

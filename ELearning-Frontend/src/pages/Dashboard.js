@@ -51,7 +51,12 @@ const Dashboard = () => {
       const coursesResponse = await axios.get('http://localhost:5000/api/courses');
       const enrollmentsResponse = await axios.get('http://localhost:5000/api/enrollments');
       
-      setRecentCourses(coursesResponse.data.slice(0, 3));
+      // For instructors, show only their own courses
+      if (user.role === 'Instructor' || user.role === 'Admin') {
+        setRecentCourses(coursesResponse.data.filter(course => course.instructorId === user.id).slice(0, 3));
+      } else {
+        setRecentCourses(coursesResponse.data.slice(0, 3));
+      }
       
       if (user.role === 'Instructor' || user.role === 'Admin') {
         setStats({
@@ -238,9 +243,9 @@ const Dashboard = () => {
             <CardActions>
               <Button 
                 fullWidth
-                onClick={() => navigate('/courses')}
+                onClick={() => navigate('/my-courses')}
               >
-                View All Courses
+                View My Courses
               </Button>
             </CardActions>
           </Card>

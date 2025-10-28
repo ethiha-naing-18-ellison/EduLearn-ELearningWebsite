@@ -94,22 +94,85 @@ const ManageCourseMaterials = () => {
   const handleAddNew = (type) => {
     setDialogType(type);
     setEditingItem(null);
-    setFormData({
-      title: '',
-      description: '',
-      courseId: parseInt(id)
-    });
+    
+    if (type === 'lesson') {
+      setFormData({
+        title: '',
+        description: '',
+        content: '',
+        courseId: parseInt(id),
+        duration: 30,
+        order: 1,
+        isFree: false,
+        type: 'Video'
+      });
+    } else if (type === 'assignment') {
+      setFormData({
+        title: '',
+        description: '',
+        instructions: '',
+        courseId: parseInt(id),
+        maxPoints: 100,
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16), // 7 days from now
+        allowLateSubmission: false,
+        latePenaltyPercentage: 0,
+        type: 'Essay'
+      });
+    } else if (type === 'quiz') {
+      setFormData({
+        title: '',
+        description: '',
+        courseId: parseInt(id),
+        duration: 30,
+        totalMarks: 100,
+        totalQuestions: 10
+      });
+    }
+    
     setOpenDialog(true);
   };
 
   const handleEdit = (item, type) => {
     setDialogType(type);
     setEditingItem(item);
-    setFormData({
-      title: item.title,
-      description: item.description,
-      ...item
-    });
+    
+    if (type === 'lesson') {
+      setFormData({
+        title: item.title,
+        description: item.description,
+        content: item.content || '',
+        courseId: parseInt(id),
+        duration: item.duration || 30,
+        order: item.order || 1,
+        isFree: item.isFree || false,
+        type: item.type || 'Video',
+        ...item
+      });
+    } else if (type === 'assignment') {
+      setFormData({
+        title: item.title,
+        description: item.description,
+        instructions: item.instructions || '',
+        courseId: parseInt(id),
+        maxPoints: item.maxPoints || 100,
+        dueDate: item.dueDate ? new Date(item.dueDate).toISOString().slice(0, 16) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+        allowLateSubmission: item.allowLateSubmission || false,
+        latePenaltyPercentage: item.latePenaltyPercentage || 0,
+        type: item.type || 'Essay',
+        ...item
+      });
+    } else if (type === 'quiz') {
+      setFormData({
+        title: item.title,
+        description: item.description,
+        courseId: parseInt(id),
+        duration: item.duration || 30,
+        totalMarks: item.totalMarks || 100,
+        totalQuestions: item.totalQuestions || 10,
+        ...item
+      });
+    }
+    
     setOpenDialog(true);
   };
 
@@ -130,15 +193,102 @@ const ManageCourseMaterials = () => {
 
   const handleSave = async () => {
     setSaving(true);
+    let requestData = { ...formData }; // Initialize requestData at the top
+    
     try {
       const endpoint = dialogType === 'lesson' ? 'lessons' : 
                      dialogType === 'assignment' ? 'assignments' : 'quizzes';
       
+      // Prepare the data based on the type
+      
+      if (dialogType === 'lesson') {
+        // Ensure all required fields are present for lessons
+        requestData = {
+          title: formData.title || 'Untitled Lesson',
+          content: formData.content || formData.description || 'No content provided', // Use description as content if content is empty
+          duration: formData.duration || 30,
+          order: formData.order || 1,
+          isFree: formData.isFree || false,
+          type: formData.type || 'Video',
+          courseId: formData.courseId
+        };
+        
+        // Validate required fields
+        if (!requestData.title.trim()) {
+          setMessage('Title is required for lessons');
+          return;
+        }
+        if (!requestData.content.trim()) {
+          setMessage('Content is required for lessons');
+          return;
+        }
+      } else if (dialogType === 'assignment') {
+        // Ensure all required fields are present for assignments
+        // Convert date to proper ISO format
+        let dueDate;
+        if (formData.dueDate) {
+          // If it's already in ISO format, use it; otherwise convert
+          if (formData.dueDate.includes('T')) {
+            dueDate = new Date(formData.dueDate).toISOString();
+          } else {
+            dueDate = new Date(formData.dueDate + 'T00:00:00.000Z').toISOString();
+          }
+        } else {
+          dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        }
+
+        requestData = {
+          title: formData.title || 'Untitled Assignment',
+          description: formData.description || 'No description provided',
+          instructions: formData.instructions || '',
+          maxPoints: formData.maxPoints || 100,
+          dueDate: dueDate,
+          allowLateSubmission: formData.allowLateSubmission || false,
+          latePenaltyPercentage: formData.latePenaltyPercentage || 0,
+          type: formData.type || 'Essay',
+          courseId: formData.courseId
+        };
+        
+        // Debug logging
+        console.log('Assignment request data:', requestData);
+        console.log('Form data:', formData);
+        
+        // Validate required fields
+        if (!requestData.title.trim()) {
+          setMessage('Title is required for assignments');
+          return;
+        }
+        if (!requestData.description.trim()) {
+          setMessage('Description is required for assignments');
+          return;
+        }
+      } else if (dialogType === 'quiz') {
+        // Ensure all required fields are present for quizzes
+        requestData = {
+          title: formData.title || 'Untitled Quiz',
+          description: formData.description || 'No description provided',
+          duration: formData.duration || 30,
+          totalMarks: formData.totalMarks || 100,
+          totalQuestions: formData.totalQuestions || 10,
+          courseId: formData.courseId
+        };
+        
+        // Validate required fields
+        if (!requestData.title.trim()) {
+          setMessage('Title is required for quizzes');
+          return;
+        }
+        if (!requestData.description.trim()) {
+          setMessage('Description is required for quizzes');
+          return;
+        }
+      }
+      
       if (editingItem) {
-        await axios.put(`http://localhost:5000/api/${endpoint}/${editingItem.id}`, formData);
+        await axios.put(`http://localhost:5000/api/${endpoint}/${editingItem.id}`, requestData);
         setMessage(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} updated successfully`);
       } else {
-        await axios.post(`http://localhost:5000/api/${endpoint}`, formData);
+        await axios.post(`http://localhost:5000/api/${endpoint}`, requestData);
         setMessage(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} created successfully`);
       }
       
@@ -146,7 +296,21 @@ const ManageCourseMaterials = () => {
       fetchCourseData();
     } catch (error) {
       console.error(`Error saving ${dialogType}:`, error);
-      setMessage(`Error saving ${dialogType}`);
+      console.error('Error details:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error headers:', error.response?.headers);
+      console.error('Request data that was sent:', requestData || 'Not available');
+      
+      let errorMessage = `Error saving ${dialogType}`;
+      if (error.response?.data?.message) {
+        errorMessage += `: ${error.response.data.message}`;
+      } else if (error.response?.data) {
+        errorMessage += `: ${JSON.stringify(error.response.data)}`;
+      } else {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      setMessage(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -218,7 +382,7 @@ const ManageCourseMaterials = () => {
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            {lesson.description}
+                            {lesson.content || lesson.description}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                             <Chip label={`${lesson.duration} min`} size="small" />
@@ -228,6 +392,7 @@ const ManageCourseMaterials = () => {
                               color={lesson.isFree ? 'success' : 'primary'}
                             />
                             <Chip label={`Order: ${lesson.order}`} size="small" variant="outlined" />
+                            <Chip label={lesson.type} size="small" color="secondary" />
                           </Box>
                         </Box>
                       }
@@ -275,12 +440,13 @@ const ManageCourseMaterials = () => {
                             {assignment.description}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Chip label={`${assignment.totalMarks} marks`} size="small" />
+                            <Chip label={`${assignment.maxPoints} points`} size="small" />
                             <Chip 
                               label={`Due: ${new Date(assignment.dueDate).toLocaleDateString()}`} 
                               size="small" 
                               color="warning"
                             />
+                            <Chip label={assignment.type} size="small" color="secondary" />
                             <Chip label={`${assignment.submissions?.length || 0} submissions`} size="small" variant="outlined" />
                           </Box>
                         </Box>
@@ -388,6 +554,15 @@ const ManageCourseMaterials = () => {
               <>
                 <TextField
                   fullWidth
+                  label="Content"
+                  value={formData.content || ''}
+                  onChange={(e) => handleFormChange('content', e.target.value)}
+                  multiline
+                  rows={4}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
                   label="Duration (minutes)"
                   type="number"
                   value={formData.duration || ''}
@@ -402,6 +577,32 @@ const ManageCourseMaterials = () => {
                   onChange={(e) => handleFormChange('order', parseInt(e.target.value))}
                   sx={{ mb: 2 }}
                 />
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Type</InputLabel>
+                  <Select
+                    value={formData.type || 'Video'}
+                    onChange={(e) => handleFormChange('type', e.target.value)}
+                    label="Type"
+                  >
+                    <MenuItem value="Video">Video</MenuItem>
+                    <MenuItem value="Audio">Audio</MenuItem>
+                    <MenuItem value="Text">Text</MenuItem>
+                    <MenuItem value="Document">Document</MenuItem>
+                    <MenuItem value="Quiz">Quiz</MenuItem>
+                    <MenuItem value="Assignment">Assignment</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Is Free</InputLabel>
+                  <Select
+                    value={formData.isFree ? 'true' : 'false'}
+                    onChange={(e) => handleFormChange('isFree', e.target.value === 'true')}
+                    label="Is Free"
+                  >
+                    <MenuItem value="false">Premium</MenuItem>
+                    <MenuItem value="true">Free</MenuItem>
+                  </Select>
+                </FormControl>
               </>
             )}
             
@@ -409,10 +610,19 @@ const ManageCourseMaterials = () => {
               <>
                 <TextField
                   fullWidth
-                  label="Total Marks"
+                  label="Instructions"
+                  value={formData.instructions || ''}
+                  onChange={(e) => handleFormChange('instructions', e.target.value)}
+                  multiline
+                  rows={3}
+                  sx={{ mb: 2 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Max Points"
                   type="number"
-                  value={formData.totalMarks || ''}
-                  onChange={(e) => handleFormChange('totalMarks', parseInt(e.target.value))}
+                  value={formData.maxPoints || ''}
+                  onChange={(e) => handleFormChange('maxPoints', parseFloat(e.target.value))}
                   sx={{ mb: 2 }}
                 />
                 <TextField
@@ -424,6 +634,41 @@ const ManageCourseMaterials = () => {
                   InputLabelProps={{ shrink: true }}
                   sx={{ mb: 2 }}
                 />
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Assignment Type</InputLabel>
+                  <Select
+                    value={formData.type || 'Essay'}
+                    onChange={(e) => handleFormChange('type', e.target.value)}
+                    label="Assignment Type"
+                  >
+                    <MenuItem value="Essay">Essay</MenuItem>
+                    <MenuItem value="MultipleChoice">Multiple Choice</MenuItem>
+                    <MenuItem value="FileUpload">File Upload</MenuItem>
+                    <MenuItem value="CodeSubmission">Code Submission</MenuItem>
+                    <MenuItem value="Presentation">Presentation</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Allow Late Submission</InputLabel>
+                  <Select
+                    value={formData.allowLateSubmission ? 'true' : 'false'}
+                    onChange={(e) => handleFormChange('allowLateSubmission', e.target.value === 'true')}
+                    label="Allow Late Submission"
+                  >
+                    <MenuItem value="false">No</MenuItem>
+                    <MenuItem value="true">Yes</MenuItem>
+                  </Select>
+                </FormControl>
+                {formData.allowLateSubmission && (
+                  <TextField
+                    fullWidth
+                    label="Late Penalty Percentage"
+                    type="number"
+                    value={formData.latePenaltyPercentage || ''}
+                    onChange={(e) => handleFormChange('latePenaltyPercentage', parseInt(e.target.value))}
+                    sx={{ mb: 2 }}
+                  />
+                )}
               </>
             )}
             

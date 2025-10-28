@@ -43,6 +43,13 @@ namespace ELearning.API.Services
 
         public async Task<LessonDto> CreateLessonAsync(CreateLessonDto createLessonDto, int courseId)
         {
+            // Parse the Type enum safely
+            LessonType lessonType = LessonType.Video; // Default value
+            if (!string.IsNullOrEmpty(createLessonDto.Type) && Enum.TryParse<LessonType>(createLessonDto.Type, out var parsedType))
+            {
+                lessonType = parsedType;
+            }
+
             var lesson = new Lesson
             {
                 Title = createLessonDto.Title,
@@ -53,7 +60,7 @@ namespace ELearning.API.Services
                 Duration = createLessonDto.Duration,
                 Order = createLessonDto.Order,
                 IsFree = createLessonDto.IsFree,
-                Type = Enum.Parse<LessonType>(createLessonDto.Type),
+                Type = lessonType,
                 CourseId = courseId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -99,8 +106,8 @@ namespace ELearning.API.Services
             if (updateLessonDto.IsFree.HasValue)
                 lesson.IsFree = updateLessonDto.IsFree.Value;
 
-            if (!string.IsNullOrEmpty(updateLessonDto.Type))
-                lesson.Type = Enum.Parse<LessonType>(updateLessonDto.Type);
+            if (!string.IsNullOrEmpty(updateLessonDto.Type) && Enum.TryParse<LessonType>(updateLessonDto.Type, out var parsedType))
+                lesson.Type = parsedType;
 
             lesson.UpdatedAt = DateTime.UtcNow;
 

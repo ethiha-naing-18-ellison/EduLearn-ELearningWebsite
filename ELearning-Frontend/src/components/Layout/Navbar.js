@@ -18,7 +18,8 @@ import {
   School,
   Dashboard,
   Add,
-  ExitToApp
+  ExitToApp,
+  BookOnline
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -59,6 +60,11 @@ const Navbar = () => {
     handleClose();
   };
 
+  const handleMyCourses = () => {
+    navigate('/my-courses');
+    handleClose();
+  };
+
   return (
     <AppBar position="static" sx={{ backgroundColor: '#1976d2' }}>
       <Toolbar>
@@ -80,13 +86,22 @@ const Navbar = () => {
           {user ? (
             <>
               {user.role === 'Instructor' || user.role === 'Admin' ? (
-                <Button
-                  color="inherit"
-                  startIcon={<Add />}
-                  onClick={handleCreateCourse}
-                >
-                  Create Course
-                </Button>
+                <>
+                  <Button
+                    color="inherit"
+                    startIcon={<BookOnline />}
+                    onClick={handleMyCourses}
+                  >
+                    My Courses
+                  </Button>
+                  <Button
+                    color="inherit"
+                    startIcon={<Add />}
+                    onClick={handleCreateCourse}
+                  >
+                    Create Course
+                  </Button>
+                </>
               ) : null}
 
               <Button

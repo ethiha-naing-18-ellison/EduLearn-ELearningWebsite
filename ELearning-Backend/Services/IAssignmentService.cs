@@ -34,11 +34,11 @@ namespace ELearning.API.Services
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string? Instructions { get; set; }
-        public decimal MaxPoints { get; set; }
-        public DateTime DueDate { get; set; }
-        public bool AllowLateSubmission { get; set; }
-        public int LatePenaltyPercentage { get; set; }
-        public string Type { get; set; } = string.Empty;
+        public decimal MaxPoints { get; set; } = 100;
+        public DateTime DueDate { get; set; } = DateTime.UtcNow.AddDays(7);
+        public bool AllowLateSubmission { get; set; } = false;
+        public int LatePenaltyPercentage { get; set; } = 0;
+        public string Type { get; set; } = "Essay";
         public int CourseId { get; set; }
     }
 

@@ -42,25 +42,46 @@ namespace ELearning.API.Services
 
         public async Task<AssignmentDto> CreateAssignmentAsync(CreateAssignmentDto createAssignmentDto, int courseId)
         {
-            var assignment = new Assignment
+            try
             {
-                Title = createAssignmentDto.Title,
-                Description = createAssignmentDto.Description,
-                Instructions = createAssignmentDto.Instructions,
-                MaxPoints = createAssignmentDto.MaxPoints,
-                DueDate = createAssignmentDto.DueDate,
-                AllowLateSubmission = createAssignmentDto.AllowLateSubmission,
-                LatePenaltyPercentage = createAssignmentDto.LatePenaltyPercentage,
-                Type = Enum.Parse<AssignmentType>(createAssignmentDto.Type),
-                CourseId = courseId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                // Debug logging
+                Console.WriteLine($"Creating assignment: Title={createAssignmentDto.Title}, CourseId={courseId}");
+                Console.WriteLine($"Assignment data: {System.Text.Json.JsonSerializer.Serialize(createAssignmentDto)}");
 
-            _context.Assignments.Add(assignment);
-            await _context.SaveChangesAsync();
+                // Parse the Type enum safely
+                AssignmentType assignmentType = AssignmentType.Essay; // Default value
+                if (!string.IsNullOrEmpty(createAssignmentDto.Type) && Enum.TryParse<AssignmentType>(createAssignmentDto.Type, out var parsedType))
+                {
+                    assignmentType = parsedType;
+                }
 
-            return await GetAssignmentByIdAsync(assignment.Id);
+                var assignment = new Assignment
+                {
+                    Title = createAssignmentDto.Title,
+                    Description = createAssignmentDto.Description,
+                    Instructions = createAssignmentDto.Instructions,
+                    MaxPoints = createAssignmentDto.MaxPoints,
+                    DueDate = createAssignmentDto.DueDate,
+                    AllowLateSubmission = createAssignmentDto.AllowLateSubmission,
+                    LatePenaltyPercentage = createAssignmentDto.LatePenaltyPercentage,
+                    Type = assignmentType,
+                    CourseId = courseId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Assignments.Add(assignment);
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"Assignment created successfully with ID: {assignment.Id}");
+                return await GetAssignmentByIdAsync(assignment.Id);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating assignment: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw;
+            }
         }
 
         public async Task<AssignmentDto> UpdateAssignmentAsync(int id, UpdateAssignmentDto updateAssignmentDto)
@@ -94,8 +115,8 @@ namespace ELearning.API.Services
             if (updateAssignmentDto.LatePenaltyPercentage.HasValue)
                 assignment.LatePenaltyPercentage = updateAssignmentDto.LatePenaltyPercentage.Value;
 
-            if (!string.IsNullOrEmpty(updateAssignmentDto.Type))
-                assignment.Type = Enum.Parse<AssignmentType>(updateAssignmentDto.Type);
+            if (!string.IsNullOrEmpty(updateAssignmentDto.Type) && Enum.TryParse<AssignmentType>(updateAssignmentDto.Type, out var parsedType))
+                assignment.Type = parsedType;
 
             assignment.UpdatedAt = DateTime.UtcNow;
 
