@@ -346,14 +346,24 @@ const CourseDetail = () => {
             
             <CardActions sx={{ p: 2 }}>
               {user?.role === 'Instructor' || user?.role === 'Admin' ? (
-                <Button 
-                  variant="contained" 
-                  fullWidth 
-                  size="large"
-                  onClick={() => navigate(`/edit-course/${course.id}`)}
-                >
-                  Edit Course
-                </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    size="large"
+                    onClick={() => navigate(`/edit-course/${course.id}`)}
+                  >
+                    Edit Course
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth 
+                    size="large"
+                    onClick={() => navigate(`/manage-materials/${course.id}`)}
+                  >
+                    Manage Course Materials
+                  </Button>
+                </Box>
               ) : enrolled ? (
                 <Button variant="contained" fullWidth size="large">
                   Continue Learning

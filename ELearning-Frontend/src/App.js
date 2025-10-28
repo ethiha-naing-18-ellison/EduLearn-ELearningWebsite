@@ -10,6 +10,7 @@ import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import CreateCourse from './pages/CreateCourse';
 import EditCourse from './pages/EditCourse';
+import ManageCourseMaterials from './pages/ManageCourseMaterials';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -57,6 +58,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EditCourse />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/manage-materials/:id" 
+              element={
+                <ProtectedRoute>
+                  <ManageCourseMaterials />
                 </ProtectedRoute>
               } 
             />

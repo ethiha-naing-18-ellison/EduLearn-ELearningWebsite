@@ -41,7 +41,7 @@ namespace ELearning.API.Services
             {
                 Token = token,
                 User = userDto,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"]))
+                ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"] ?? "60"))
             };
         }
 
@@ -82,16 +82,16 @@ namespace ELearning.API.Services
             {
                 Token = token,
                 User = userDto,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"]))
+                ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"] ?? "60"))
             };
         }
 
-        public async Task<bool> ValidateTokenAsync(string token)
+        public Task<bool> ValidateTokenAsync(string token)
         {
             try
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
+                var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "default-key");
                 
                 tokenHandler.ValidateToken(token, new TokenValidationParameters
                 {
@@ -105,11 +105,11 @@ namespace ELearning.API.Services
                     ClockSkew = TimeSpan.Zero
                 }, out SecurityToken validatedToken);
 
-                return true;
+                return Task.FromResult(true);
             }
             catch
             {
-                return false;
+                return Task.FromResult(false);
             }
         }
 
@@ -131,7 +131,7 @@ namespace ELearning.API.Services
         private string GenerateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
+            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "default-key");
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]
@@ -141,7 +141,7 @@ namespace ELearning.API.Services
                     new Claim("role", user.Role.ToString()),
                     new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
                 }),
-                Expires = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"])),
+                Expires = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["Jwt:ExpiryInMinutes"] ?? "60")),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

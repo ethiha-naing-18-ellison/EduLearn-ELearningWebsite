@@ -39,6 +39,7 @@ namespace ELearning.API.Services
         public bool AllowLateSubmission { get; set; }
         public int LatePenaltyPercentage { get; set; }
         public string Type { get; set; } = string.Empty;
+        public int CourseId { get; set; }
     }
 
     public class UpdateAssignmentDto

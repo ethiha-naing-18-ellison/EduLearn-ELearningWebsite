@@ -38,6 +38,7 @@ namespace ELearning.API.Services
         public int Order { get; set; }
         public bool IsFree { get; set; }
         public string Type { get; set; } = string.Empty;
+        public int CourseId { get; set; }
     }
 
     public class UpdateLessonDto

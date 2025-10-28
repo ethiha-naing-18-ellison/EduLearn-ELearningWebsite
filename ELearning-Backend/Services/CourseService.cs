@@ -54,9 +54,9 @@ namespace ELearning.API.Services
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(c => c.Title.Contains(search) || 
-                                       c.Description.Contains(search) ||
-                                       c.Instructor.FirstName.Contains(search) ||
-                                       c.Instructor.LastName.Contains(search));
+                                       (c.Description ?? "").Contains(search) ||
+                                       (c.Instructor != null && c.Instructor.FirstName.Contains(search)) ||
+                                       (c.Instructor != null && c.Instructor.LastName.Contains(search)));
                 Console.WriteLine($"Applied search filter: {search}");
             }
 
@@ -73,7 +73,7 @@ namespace ELearning.API.Services
             // Apply category filter
             if (!string.IsNullOrEmpty(category))
             {
-                query = query.Where(c => c.Category.Name == category);
+                query = query.Where(c => c.Category != null && c.Category.Name == category);
                 Console.WriteLine($"Applied category filter: {category}");
             }
 
@@ -224,7 +224,7 @@ namespace ELearning.API.Services
             var courses = await _context.Courses
                 .Where(c => c.Status == CourseStatus.Published &&
                            (c.Title.Contains(searchTerm) || 
-                            c.Description.Contains(searchTerm)))
+                            (c.Description ?? "").Contains(searchTerm)))
                 .Include(c => c.Instructor)
                 .Include(c => c.Category)
                 .ToListAsync();
