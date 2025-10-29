@@ -876,11 +876,14 @@ const CourseLearning = () => {
                         sx={{
                           position: 'relative',
                           width: '100%',
-                          height: '60%',
+                          height: '70%',
                           bgcolor: 'black',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
+                          borderRadius: 1,
+                          overflow: 'hidden',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
                         }}
                       >
                         {materialContent.videoUrl ? (
@@ -891,64 +894,140 @@ const CourseLearning = () => {
                             frameBorder="0"
                             allowFullScreen
                             title={materialContent.title}
+                            style={{ borderRadius: '4px' }}
                           />
                         ) : (
-                          <Box sx={{ textAlign: 'center', color: 'white' }}>
-                            <VideoLibrary sx={{ fontSize: 80, mb: 2 }} />
-                            <Typography variant="h6">Video not available</Typography>
+                          <Box sx={{ textAlign: 'center', color: 'white', p: 4 }}>
+                            <VideoLibrary sx={{ fontSize: 80, mb: 2, opacity: 0.7 }} />
+                            <Typography variant="h5" sx={{ mb: 1 }}>Video not available</Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                              The video content is currently unavailable
+                            </Typography>
                           </Box>
                         )}
                       </Box>
                       
                       {/* Video Details */}
-                      <Box sx={{ p: 3, height: '40%', overflow: 'auto' }}>
-                        <Typography variant="h6" gutterBottom>
-                          {materialContent.title}
-                        </Typography>
-                        <Typography variant="body1" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
-                          {materialContent.description}
-                        </Typography>
+                      <Box sx={{ 
+                        p: 3, 
+                        height: '30%', 
+                        overflow: 'auto',
+                        bgcolor: 'background.paper',
+                        borderTop: 1,
+                        borderColor: 'divider'
+                      }}>
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                            {materialContent.title}
+                          </Typography>
+                          <Typography variant="body1" sx={{ 
+                            mb: 2, 
+                            whiteSpace: 'pre-wrap',
+                            color: 'text.secondary',
+                            lineHeight: 1.6
+                          }}>
+                            {materialContent.description}
+                          </Typography>
+                        </Box>
                         
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
                           <Chip
-                            label={`Duration: ${Math.floor(materialContent.duration / 60)}:${(materialContent.duration % 60).toString().padStart(2, '0')}`}
+                            icon={<PlayArrow />}
+                            label={`${Math.floor(materialContent.duration / 60)}:${(materialContent.duration % 60).toString().padStart(2, '0')}`}
                             color="primary"
-                            variant="outlined"
+                            variant="filled"
+                            sx={{ fontWeight: 500 }}
                           />
                           <Chip
-                            label={`Type: ${materialContent.videoType}`}
+                            icon={<VideoLibrary />}
+                            label={materialContent.videoType}
                             color="secondary"
-                            variant="outlined"
+                            variant="filled"
+                            sx={{ fontWeight: 500 }}
                           />
                           <Chip
-                            label={`Quality: ${materialContent.quality}`}
+                            label={materialContent.quality}
                             color="info"
-                            variant="outlined"
+                            variant="filled"
+                            sx={{ fontWeight: 500 }}
                           />
                           {materialContent.isFree && (
-                            <Chip label="Free" color="success" variant="outlined" />
+                            <Chip 
+                              label="Free Content" 
+                              color="success" 
+                              variant="filled"
+                              sx={{ fontWeight: 500 }}
+                            />
+                          )}
+                          {materialContent.isPublished && (
+                            <Chip 
+                              label="Published" 
+                              color="default" 
+                              variant="outlined"
+                              sx={{ fontWeight: 500 }}
+                            />
                           )}
                         </Box>
                         
-                        {materialContent.transcript && (
-                          <Box sx={{ mb: 2 }}>
-                            <Typography variant="h6" gutterBottom>
-                              Transcript
-                            </Typography>
-                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                              {materialContent.transcript}
-                            </Typography>
-                          </Box>
-                        )}
-                        
-                        {materialContent.notes && (
-                          <Box>
-                            <Typography variant="h6" gutterBottom>
-                              Notes
-                            </Typography>
-                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                              {materialContent.notes}
-                            </Typography>
+                        {(materialContent.transcript || materialContent.notes) && (
+                          <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+                            {materialContent.transcript && (
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="h6" gutterBottom sx={{ 
+                                  color: 'primary.main',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1
+                                }}>
+                                  <Description />
+                                  Transcript
+                                </Typography>
+                                <Typography variant="body2" sx={{ 
+                                  whiteSpace: 'pre-wrap',
+                                  color: 'text.secondary',
+                                  lineHeight: 1.5,
+                                  maxHeight: '120px',
+                                  overflow: 'auto',
+                                  p: 2,
+                                  bgcolor: 'grey.50',
+                                  borderRadius: 1,
+                                  border: '1px solid',
+                                  borderColor: 'grey.200'
+                                }}>
+                                  {materialContent.transcript}
+                                </Typography>
+                              </Box>
+                            )}
+                            
+                            {materialContent.notes && (
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="h6" gutterBottom sx={{ 
+                                  color: 'primary.main',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1
+                                }}>
+                                  <MenuBook />
+                                  Instructor Notes
+                                </Typography>
+                                <Typography variant="body2" sx={{ 
+                                  whiteSpace: 'pre-wrap',
+                                  color: 'text.secondary',
+                                  lineHeight: 1.5,
+                                  maxHeight: '120px',
+                                  overflow: 'auto',
+                                  p: 2,
+                                  bgcolor: 'grey.50',
+                                  borderRadius: 1,
+                                  border: '1px solid',
+                                  borderColor: 'grey.200'
+                                }}>
+                                  {materialContent.notes}
+                                </Typography>
+                              </Box>
+                            )}
                           </Box>
                         )}
                       </Box>
