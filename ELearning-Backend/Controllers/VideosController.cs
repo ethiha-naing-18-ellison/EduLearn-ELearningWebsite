@@ -49,6 +49,63 @@ namespace ELearning.API.Controllers
             }
         }
 
+        [HttpPost("upload")]
+        public async Task<ActionResult<VideoDto>> UploadVideo([FromForm] CreateVideoDto createVideoDto, IFormFile? videoFile)
+        {
+            try
+            {
+                Console.WriteLine($"VideosController: Received video upload request");
+                Console.WriteLine($"Video DTO: {System.Text.Json.JsonSerializer.Serialize(createVideoDto)}");
+                Console.WriteLine($"Video File: {videoFile?.FileName}, Size: {videoFile?.Length}");
+                
+                if (createVideoDto == null)
+                {
+                    return BadRequest(new { message = "Video data is required" });
+                }
+
+                if (createVideoDto.CourseId <= 0)
+                {
+                    return BadRequest(new { message = "Valid CourseId is required" });
+                }
+
+                // Handle file upload
+                if (videoFile != null && videoFile.Length > 0)
+                {
+                    // Create uploads directory if it doesn't exist
+                    var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "videos");
+                    if (!Directory.Exists(uploadsPath))
+                    {
+                        Directory.CreateDirectory(uploadsPath);
+                    }
+                    
+                    // Generate unique filename
+                    var fileName = $"{DateTime.Now.Ticks}_{videoFile.FileName}";
+                    var filePath = Path.Combine(uploadsPath, fileName);
+                    
+                    // Save file
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await videoFile.CopyToAsync(stream);
+                    }
+                    
+                    // Update video file path
+                    createVideoDto.VideoFile = $"uploads/videos/{fileName}";
+                    
+                    Console.WriteLine($"Video file saved to: {createVideoDto.VideoFile}");
+                }
+
+                var video = await _videoService.CreateVideoAsync(createVideoDto, createVideoDto.CourseId);
+                Console.WriteLine($"VideosController: Video created successfully with ID: {video.Id}");
+                return CreatedAtAction(nameof(GetVideo), new { id = video.Id }, video);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"VideosController: Error uploading video: {ex.Message}");
+                Console.WriteLine($"VideosController: Stack trace: {ex.StackTrace}");
+                return BadRequest(new { message = ex.Message, details = ex.StackTrace });
+            }
+        }
+
         [HttpPost]
         public async Task<ActionResult<VideoDto>> CreateVideo([FromBody] CreateVideoDto createVideoDto)
         {

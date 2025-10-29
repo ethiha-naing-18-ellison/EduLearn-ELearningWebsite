@@ -23,7 +23,14 @@ import {
   Alert,
   Paper,
   IconButton,
-  Tooltip
+  Tooltip,
+  Modal,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Backdrop,
+  Fade
 } from '@mui/material';
 import {
   PlayCircle,
@@ -36,7 +43,13 @@ import {
   ArrowBack,
   MenuBook,
   School,
-  MenuBookOutlined
+  MenuBookOutlined,
+  Close,
+  Download,
+  PlayArrow,
+  Pause,
+  VolumeUp,
+  VolumeOff
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,6 +69,12 @@ const CourseLearning = () => {
   const [enrolled, setEnrolled] = useState(false);
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [materialContent, setMaterialContent] = useState(null);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(false);
 
   useEffect(() => {
     fetchCourseData();
@@ -131,32 +150,112 @@ const CourseLearning = () => {
     setTabValue(newValue);
   };
 
-  const handleMaterialClick = (type, material) => {
-    // Navigate to specific material based on type
-    switch (type) {
-      case 'lesson':
-        // Navigate to lesson detail or open lesson content
-        console.log('Opening lesson:', material);
-        break;
-      case 'assignment':
-        // Navigate to assignment detail
-        console.log('Opening assignment:', material);
-        break;
-      case 'quiz':
-        // Navigate to quiz
-        console.log('Opening quiz:', material);
-        break;
-      case 'video':
-        // Open video player
-        console.log('Opening video:', material);
-        break;
-      case 'document':
-        // Open document viewer
-        console.log('Opening document:', material);
-        break;
-      default:
-        break;
+  const handleMaterialClick = async (type, material) => {
+    try {
+      setContentLoading(true);
+      setSelectedMaterial(material);
+      setModalOpen(true);
+      
+      // Fetch detailed content based on material type
+      let content = null;
+      switch (type) {
+        case 'lesson':
+          const lessonResponse = await axios.get(`http://localhost:5000/api/lessons/${material.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          content = lessonResponse.data;
+          break;
+        case 'assignment':
+          const assignmentResponse = await axios.get(`http://localhost:5000/api/assignments/${material.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          content = assignmentResponse.data;
+          break;
+        case 'quiz':
+          const quizResponse = await axios.get(`http://localhost:5000/api/quizzes/${material.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          content = quizResponse.data;
+          break;
+        case 'video':
+          const videoResponse = await axios.get(`http://localhost:5000/api/videos/${material.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          content = videoResponse.data;
+          break;
+        case 'document':
+          const documentResponse = await axios.get(`http://localhost:5000/api/documents/${material.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          content = documentResponse.data;
+          break;
+        default:
+          content = material;
+          break;
+      }
+      
+      setMaterialContent(content);
+    } catch (error) {
+      console.error('Error fetching material content:', error);
+      setMaterialContent(material); // Fallback to basic material data
+    } finally {
+      setContentLoading(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedMaterial(null);
+    setMaterialContent(null);
+    setVideoPlaying(false);
+    setVideoMuted(false);
+  };
+
+  const toggleVideoPlay = () => {
+    setVideoPlaying(!videoPlaying);
+  };
+
+  const toggleVideoMute = () => {
+    setVideoMuted(!videoMuted);
+  };
+
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    
+    // Handle YouTube URLs
+    if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+      let videoId = '';
+      if (url.includes('youtube.com/watch')) {
+        videoId = url.split('v=')[1]?.split('&')[0];
+      } else if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+      }
+      
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+    
+    // Handle Vimeo URLs
+    if (url.includes('vimeo.com/')) {
+      const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+      if (videoId) {
+        return `https://player.vimeo.com/video/${videoId}`;
+      }
+    }
+    
+    // For other URLs, return as is
+    return url;
   };
 
   const getTypeIcon = (type) => {
@@ -518,6 +617,465 @@ const CourseLearning = () => {
           )}
         </Box>
       </Paper>
+
+      {/* Material Content Modal */}
+      <Modal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Fade in={modalOpen}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              bgcolor: 'background.paper',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                p: 2,
+                borderBottom: 1,
+                borderColor: 'divider',
+                bgcolor: 'primary.main',
+                color: 'white',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {selectedMaterial && (
+                  <>
+                    {selectedMaterial.type === 'lesson' && <MenuBook />}
+                    {selectedMaterial.type === 'assignment' && <Assignment />}
+                    {selectedMaterial.type === 'quiz' && <Quiz />}
+                    {selectedMaterial.type === 'video' && <VideoLibrary />}
+                    {selectedMaterial.type === 'document' && <Description />}
+                  </>
+                )}
+                <Typography variant="h5" component="h2">
+                  {selectedMaterial?.title || 'Loading...'}
+                </Typography>
+              </Box>
+              <IconButton
+                onClick={handleCloseModal}
+                sx={{ color: 'white' }}
+                size="large"
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            {/* Modal Content */}
+            <Box sx={{ flex: 1, overflow: 'auto', p: 0 }}>
+              {contentLoading ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    gap: 2,
+                  }}
+                >
+                  <CircularProgress size={60} />
+                  <Typography variant="h6">Loading content...</Typography>
+                </Box>
+              ) : materialContent ? (
+                <Box sx={{ height: '100%' }}>
+                  {selectedMaterial?.type === 'lesson' && (
+                    <Box sx={{ p: 3, height: '100%' }}>
+                      <Typography variant="h6" gutterBottom>
+                        Lesson Content
+                      </Typography>
+                      <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
+                        {materialContent.content}
+                      </Typography>
+                      
+                      {materialContent.videoUrl && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="h6" gutterBottom>
+                            Video
+                          </Typography>
+                          <Box
+                            sx={{
+                              position: 'relative',
+                              width: '100%',
+                              height: '400px',
+                              bgcolor: 'black',
+                              borderRadius: 1,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <iframe
+                              src={getEmbedUrl(materialContent.videoUrl)}
+                              width="100%"
+                              height="100%"
+                              frameBorder="0"
+                              allowFullScreen
+                              title={materialContent.title}
+                            />
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      {materialContent.audioUrl && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="h6" gutterBottom>
+                            Audio
+                          </Typography>
+                          <audio controls style={{ width: '100%' }}>
+                            <source src={materialContent.audioUrl} type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                          </audio>
+                        </Box>
+                      )}
+                      
+                      {(materialContent.documentUrl || materialContent.documentFile) && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="h6" gutterBottom>
+                            Document
+                          </Typography>
+                          <Button
+                            variant="contained"
+                            startIcon={<Download />}
+                            href={materialContent.documentUrl || `http://localhost:5000/api/documents/${materialContent.id}/download`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Download Document
+                          </Button>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+
+                  {selectedMaterial?.type === 'assignment' && (
+                    <Box sx={{ p: 3, height: '100%' }}>
+                      <Typography variant="h6" gutterBottom>
+                        Assignment Details
+                      </Typography>
+                      <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
+                        {materialContent.description}
+                      </Typography>
+                      
+                      {materialContent.instructions && (
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="h6" gutterBottom>
+                            Instructions
+                          </Typography>
+                          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {materialContent.instructions}
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+                        <Chip
+                          label={`Max Points: ${materialContent.maxPoints}`}
+                          color="primary"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`Due: ${new Date(materialContent.dueDate).toLocaleDateString()}`}
+                          color="secondary"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`Type: ${materialContent.type}`}
+                          color="info"
+                          variant="outlined"
+                        />
+                        {materialContent.allowLateSubmission && (
+                          <Chip
+                            label={`Late Penalty: ${materialContent.latePenaltyPercentage}%`}
+                            color="warning"
+                            variant="outlined"
+                          />
+                        )}
+                      </Box>
+                      
+                      <Button variant="contained" size="large">
+                        Start Assignment
+                      </Button>
+                    </Box>
+                  )}
+
+                  {selectedMaterial?.type === 'quiz' && (
+                    <Box sx={{ p: 3, height: '100%' }}>
+                      <Typography variant="h6" gutterBottom>
+                        Quiz Details
+                      </Typography>
+                      <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
+                        {materialContent.description}
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+                        <Chip
+                          label={`Time Limit: ${materialContent.timeLimit} minutes`}
+                          color="primary"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`Max Attempts: ${materialContent.maxAttempts}`}
+                          color="secondary"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`Questions: ${materialContent.totalQuestions}`}
+                          color="info"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`Passing Score: ${materialContent.passingScore}%`}
+                          color="success"
+                          variant="outlined"
+                        />
+                      </Box>
+                      
+                      {materialContent.availableFrom && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          Available from: {new Date(materialContent.availableFrom).toLocaleString()}
+                        </Typography>
+                      )}
+                      
+                      {materialContent.availableUntil && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                          Available until: {new Date(materialContent.availableUntil).toLocaleString()}
+                        </Typography>
+                      )}
+                      
+                      <Button variant="contained" size="large">
+                        Start Quiz
+                      </Button>
+                    </Box>
+                  )}
+
+                  {selectedMaterial?.type === 'video' && (
+                    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      {/* Video Player */}
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '60%',
+                          bgcolor: 'black',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {materialContent.videoUrl ? (
+                          <iframe
+                            src={getEmbedUrl(materialContent.videoUrl)}
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            allowFullScreen
+                            title={materialContent.title}
+                          />
+                        ) : (
+                          <Box sx={{ textAlign: 'center', color: 'white' }}>
+                            <VideoLibrary sx={{ fontSize: 80, mb: 2 }} />
+                            <Typography variant="h6">Video not available</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                      
+                      {/* Video Details */}
+                      <Box sx={{ p: 3, height: '40%', overflow: 'auto' }}>
+                        <Typography variant="h6" gutterBottom>
+                          {materialContent.title}
+                        </Typography>
+                        <Typography variant="body1" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                          {materialContent.description}
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                          <Chip
+                            label={`Duration: ${Math.floor(materialContent.duration / 60)}:${(materialContent.duration % 60).toString().padStart(2, '0')}`}
+                            color="primary"
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={`Type: ${materialContent.videoType}`}
+                            color="secondary"
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={`Quality: ${materialContent.quality}`}
+                            color="info"
+                            variant="outlined"
+                          />
+                          {materialContent.isFree && (
+                            <Chip label="Free" color="success" variant="outlined" />
+                          )}
+                        </Box>
+                        
+                        {materialContent.transcript && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                              Transcript
+                            </Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                              {materialContent.transcript}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {materialContent.notes && (
+                          <Box>
+                            <Typography variant="h6" gutterBottom>
+                              Notes
+                            </Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                              {materialContent.notes}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {selectedMaterial?.type === 'document' && (
+                    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      {/* Document Viewer */}
+                      <Box
+                        sx={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: 'grey.100',
+                        }}
+                      >
+                        {materialContent.documentUrl ? (
+                          <iframe
+                            src={materialContent.documentUrl}
+                            width="100%"
+                            height="100%"
+                            title={materialContent.title}
+                          />
+                        ) : (
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Description sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
+                            <Typography variant="h6" color="text.secondary">
+                              Document preview not available
+                            </Typography>
+                            <Button
+                              variant="contained"
+                              startIcon={<Download />}
+                              href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ mt: 2 }}
+                            >
+                              Download Document
+                            </Button>
+                          </Box>
+                        )}
+                      </Box>
+                      
+                      {/* Document Details */}
+                      <Box sx={{ p: 3, borderTop: 1, borderColor: 'divider' }}>
+                        <Typography variant="h6" gutterBottom>
+                          {materialContent.title}
+                        </Typography>
+                        <Typography variant="body1" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+                          {materialContent.description}
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                          <Chip
+                            label={`Type: ${materialContent.documentType}`}
+                            color="primary"
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={`Format: ${materialContent.fileFormat}`}
+                            color="secondary"
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={`Size: ${(materialContent.fileSize / 1024 / 1024).toFixed(1)} MB`}
+                            color="info"
+                            variant="outlined"
+                          />
+                          {materialContent.pageCount > 0 && (
+                            <Chip
+                              label={`Pages: ${materialContent.pageCount}`}
+                              color="warning"
+                              variant="outlined"
+                            />
+                          )}
+                          {materialContent.isFree && (
+                            <Chip label="Free" color="success" variant="outlined" />
+                          )}
+                        </Box>
+                        
+                        {materialContent.summary && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                              Summary
+                            </Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                              {materialContent.summary}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {materialContent.notes && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                              Notes
+                            </Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                              {materialContent.notes}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    gap: 2,
+                  }}
+                >
+                  <Typography variant="h6" color="text.secondary">
+                    Content not available
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </Container>
   );
 };

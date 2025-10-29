@@ -445,18 +445,66 @@ const ManageCourseMaterials = () => {
 
       // Handle file uploads if files are selected
       if (dialogType === 'video' && selectedVideoFile) {
-        // For now, we'll just use the file name
-        // In a real implementation, you'd upload the file to a server
-        requestData.videoFile = selectedVideoFile.name;
-        requestData.videoUrl = ''; // Clear URL when file is uploaded
+        // Upload the video file to the server
+        const uploadFormData = new FormData();
+        uploadFormData.append('videoFile', selectedVideoFile);
+        uploadFormData.append('title', requestData.title);
+        uploadFormData.append('description', requestData.description);
+        uploadFormData.append('courseId', requestData.courseId);
+        uploadFormData.append('isFree', requestData.isFree);
+        uploadFormData.append('videoType', requestData.videoType);
+        uploadFormData.append('quality', requestData.quality);
+        uploadFormData.append('duration', requestData.duration || 0);
+        uploadFormData.append('order', requestData.order || 1);
+        uploadFormData.append('isPublished', requestData.isPublished);
+        uploadFormData.append('transcript', requestData.transcript || '');
+        uploadFormData.append('notes', requestData.notes || '');
+
+        // Upload file using the upload endpoint
+        const uploadResponse = await axios.post('http://localhost:5000/api/videos/upload', uploadFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        setMessage('Video uploaded successfully');
+        setOpenDialog(false);
+        fetchCourseData();
+        return; // Exit early since we handled the upload
       }
       
       if (dialogType === 'document' && selectedDocumentFile) {
-        // For now, we'll just use the file name and size
-        // In a real implementation, you'd upload the file to a server
-        requestData.documentFile = selectedDocumentFile.name;
-        requestData.documentUrl = ''; // Clear URL when file is uploaded
-        requestData.fileSize = selectedDocumentFile.size;
+        // Upload the file to the server
+        const uploadFormData = new FormData();
+        uploadFormData.append('documentFile', selectedDocumentFile);
+        uploadFormData.append('title', requestData.title);
+        uploadFormData.append('description', requestData.description);
+        uploadFormData.append('courseId', requestData.courseId);
+        uploadFormData.append('isFree', requestData.isFree);
+        uploadFormData.append('documentType', requestData.documentType);
+        uploadFormData.append('fileFormat', requestData.fileFormat);
+        uploadFormData.append('version', requestData.version);
+        uploadFormData.append('language', requestData.language);
+        uploadFormData.append('keywords', requestData.keywords || '');
+        uploadFormData.append('summary', requestData.summary || '');
+        uploadFormData.append('notes', requestData.notes || '');
+        uploadFormData.append('pageCount', requestData.pageCount || 0);
+        uploadFormData.append('order', requestData.order || 1);
+        uploadFormData.append('isPublished', requestData.isPublished);
+
+        // Upload file using the upload endpoint
+        const uploadResponse = await axios.post('http://localhost:5000/api/documents/upload', uploadFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        setMessage('Document uploaded successfully');
+        setOpenDialog(false);
+        fetchCourseData();
+        return; // Exit early since we handled the upload
       }
       
       if ((dialogType === 'video' || dialogType === 'document') && selectedThumbnailFile) {
