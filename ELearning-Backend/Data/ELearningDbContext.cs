@@ -16,9 +16,6 @@ namespace ELearning.API.Data
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Assignment> Assignments { get; set; }
         public DbSet<Submission> Submissions { get; set; }
-        public DbSet<Quiz> Quizzes { get; set; }
-        public DbSet<QuizQuestion> QuizQuestions { get; set; }
-        public DbSet<QuizAttempt> QuizAttempts { get; set; }
         public DbSet<Video> Videos { get; set; }
         public DbSet<Document> Documents { get; set; }
         public DbSet<Progress> Progress { get; set; }
@@ -126,45 +123,6 @@ namespace ELearning.API.Data
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Quiz configuration
-            modelBuilder.Entity<Quiz>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.Description).HasMaxLength(500);
-                entity.HasOne(e => e.Course)
-                      .WithMany(c => c.Quizzes)
-                      .HasForeignKey(e => e.CourseId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // QuizQuestion configuration
-            modelBuilder.Entity<QuizQuestion>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Question).IsRequired();
-                entity.Property(e => e.CorrectAnswer).IsRequired();
-                entity.Property(e => e.Type).HasConversion<string>();
-                entity.HasOne(e => e.Quiz)
-                      .WithMany(q => q.Questions)
-                      .HasForeignKey(e => e.QuizId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // QuizAttempt configuration
-            modelBuilder.Entity<QuizAttempt>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Score).HasColumnType("decimal(5,2)");
-                entity.HasOne(e => e.Quiz)
-                      .WithMany(q => q.Attempts)
-                      .HasForeignKey(e => e.QuizId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                entity.HasOne(e => e.User)
-                      .WithMany(u => u.QuizAttempts)
-                      .HasForeignKey(e => e.UserId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
 
             // Video configuration
             modelBuilder.Entity<Video>(entity =>

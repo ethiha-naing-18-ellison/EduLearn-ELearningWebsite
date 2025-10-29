@@ -29,7 +29,6 @@ import {
   Schedule,
   PlayCircle,
   Assignment,
-  Quiz,
   CheckCircle,
   Lock,
   VideoLibrary,
@@ -46,7 +45,6 @@ const CourseDetail = () => {
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
   const [videos, setVideos] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,11 +74,10 @@ const CourseDetail = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes, documentsRes] = await Promise.all([
+      const [courseRes, lessonsRes, assignmentsRes, videosRes, documentsRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/courses/${id}`),
         axios.get(`http://localhost:5000/api/lessons/course/${id}`),
         axios.get(`http://localhost:5000/api/assignments/course/${id}`),
-        axios.get(`http://localhost:5000/api/quizzes/course/${id}`),
         axios.get(`http://localhost:5000/api/videos/course/${id}`),
         axios.get(`http://localhost:5000/api/documents/course/${id}`)
       ]);
@@ -88,7 +85,6 @@ const CourseDetail = () => {
       setCourse(courseRes.data);
       setLessons(lessonsRes.data);
       setAssignments(assignmentsRes.data);
-      setQuizzes(quizzesRes.data);
       setVideos(videosRes.data);
       setDocuments(documentsRes.data);
     } catch (error) {
@@ -190,8 +186,6 @@ const CourseDetail = () => {
         return <PlayCircle color="secondary" />;
       case 'Assignment':
         return <Assignment color="secondary" />;
-      case 'Quiz':
-        return <Quiz color="info" />;
       case 'Document':
         return <Assignment color="primary" />;
       case 'Text':
@@ -372,34 +366,6 @@ const CourseDetail = () => {
                       </ListItem>
                     ))}
                     
-                    {/* Display quizzes */}
-                    {quizzes.map((quiz, index) => (
-                      <ListItem key={`quiz-${quiz.id}`} sx={{ px: 0 }}>
-                        <ListItemIcon>
-                          <Quiz color="info" />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={quiz.title}
-                          secondary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Typography variant="body2" color="text.secondary">
-                                Quiz - {quiz.duration} min
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {quiz.totalQuestions} questions
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {enrolled ? (
-                            <CheckCircle color="success" />
-                          ) : (
-                            <Lock color="disabled" />
-                          )}
-                        </Box>
-                      </ListItem>
-                    ))}
                     
                     {/* Display videos */}
                     {videos.map((video, index) => (
@@ -471,7 +437,7 @@ const CourseDetail = () => {
                     ))}
                     
                     {/* Show message if no content */}
-                    {sortedLessons.length === 0 && assignments.length === 0 && quizzes.length === 0 && videos.length === 0 && documents.length === 0 && (
+                    {sortedLessons.length === 0 && assignments.length === 0 && videos.length === 0 && documents.length === 0 && (
                       <ListItem sx={{ px: 0 }}>
                         <ListItemText
                           primary="No course content available yet"
@@ -582,12 +548,6 @@ const CourseDetail = () => {
                       <Assignment color="secondary" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
                     <ListItemText primary={`${assignments.length} assignments`} />
-                  </ListItem>
-                  <ListItem sx={{ px: 0 }}>
-                    <ListItemIcon>
-                      <Quiz color="info" sx={{ fontSize: 20 }} />
-                    </ListItemIcon>
-                    <ListItemText primary={`${quizzes.length} quizzes`} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>

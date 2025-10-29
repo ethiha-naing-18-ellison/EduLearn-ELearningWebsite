@@ -41,7 +41,6 @@ namespace ELearning.API.Models
         public virtual ICollection<Course> Courses { get; set; } = new List<Course>();
         public virtual ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
         public virtual ICollection<Submission> Submissions { get; set; } = new List<Submission>();
-        public virtual ICollection<QuizAttempt> QuizAttempts { get; set; } = new List<QuizAttempt>();
         public virtual ICollection<Progress> Progress { get; set; } = new List<Progress>();
         public virtual ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();
     }

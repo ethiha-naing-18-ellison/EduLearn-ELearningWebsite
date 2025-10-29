@@ -60,19 +60,6 @@ namespace ELearning.API.Mapping
             CreateMap<Submission, SubmissionDto>()
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
 
-            // Quiz mappings
-            CreateMap<Quiz, QuizDto>();
-            CreateMap<CreateQuizDto, Quiz>();
-            CreateMap<UpdateQuizDto, Quiz>();
-
-            // QuizQuestion mappings
-            CreateMap<QuizQuestion, QuizQuestionDto>()
-                .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
-            CreateMap<CreateQuizQuestionDto, QuizQuestion>();
-            CreateMap<UpdateQuizQuestionDto, QuizQuestion>();
-
-            // QuizAttempt mappings
-            CreateMap<QuizAttempt, QuizAttemptDto>();
 
             // Progress mappings
             CreateMap<Progress, ProgressDto>();

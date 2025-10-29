@@ -35,7 +35,6 @@ import {
 import {
   PlayCircle,
   Assignment,
-  Quiz,
   CheckCircle,
   Lock,
   VideoLibrary,
@@ -62,7 +61,6 @@ const CourseLearning = () => {
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
   const [videos, setVideos] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +71,7 @@ const CourseLearning = () => {
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [materialContent, setMaterialContent] = useState(null);
   const [contentLoading, setContentLoading] = useState(false);
+  
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [videoMuted, setVideoMuted] = useState(false);
 
@@ -94,6 +93,7 @@ const CourseLearning = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user, id]);
+
 
   const checkEnrollment = async () => {
     if (!user) {
@@ -124,11 +124,10 @@ const CourseLearning = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      const [courseRes, lessonsRes, assignmentsRes, quizzesRes, videosRes, documentsRes] = await Promise.all([
+      const [courseRes, lessonsRes, assignmentsRes, videosRes, documentsRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/courses/${id}`),
         axios.get(`http://localhost:5000/api/lessons/course/${id}`),
         axios.get(`http://localhost:5000/api/assignments/course/${id}`),
-        axios.get(`http://localhost:5000/api/quizzes/course/${id}`),
         axios.get(`http://localhost:5000/api/videos/course/${id}`),
         axios.get(`http://localhost:5000/api/documents/course/${id}`)
       ]);
@@ -136,7 +135,6 @@ const CourseLearning = () => {
       setCourse(courseRes.data);
       setLessons(lessonsRes.data);
       setAssignments(assignmentsRes.data);
-      setQuizzes(quizzesRes.data);
       setVideos(videosRes.data);
       setDocuments(documentsRes.data);
     } catch (error) {
@@ -174,14 +172,6 @@ const CourseLearning = () => {
             }
           });
           content = assignmentResponse.data;
-          break;
-        case 'quiz':
-          const quizResponse = await axios.get(`http://localhost:5000/api/quizzes/${material.id}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          content = quizResponse.data;
           break;
         case 'video':
           const videoResponse = await axios.get(`http://localhost:5000/api/videos/${material.id}`, {
@@ -258,6 +248,7 @@ const CourseLearning = () => {
     return url;
   };
 
+
   const getTypeIcon = (type) => {
     switch (type) {
       case 'Video':
@@ -266,8 +257,6 @@ const CourseLearning = () => {
         return <PlayCircle color="secondary" />;
       case 'Assignment':
         return <Assignment color="secondary" />;
-      case 'Quiz':
-        return <Quiz color="info" />;
       case 'Document':
         return <Assignment color="primary" />;
       case 'Text':
@@ -321,7 +310,6 @@ const CourseLearning = () => {
   const generalMaterials = [
     ...sortedLessons.map(lesson => ({ ...lesson, type: 'lesson', materialType: 'Lesson' })),
     ...assignments.map(assignment => ({ ...assignment, type: 'assignment', materialType: 'Assignment' })),
-    ...quizzes.map(quiz => ({ ...quiz, type: 'quiz', materialType: 'Quiz' })),
     ...videos.map(video => ({ ...video, type: 'video', materialType: 'Video' })),
     ...documents.map(document => ({ ...document, type: 'document', materialType: 'Document' }))
   ].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -391,7 +379,6 @@ const CourseLearning = () => {
           <ListItemIcon>
             {material.type === 'lesson' && getTypeIcon(material.type)}
             {material.type === 'assignment' && <Assignment color="secondary" />}
-            {material.type === 'quiz' && <Quiz color="info" />}
             {material.type === 'video' && getVideoTypeIcon(material.videoType)}
             {material.type === 'document' && getDocumentTypeIcon(material.documentType)}
           </ListItemIcon>
@@ -504,12 +491,6 @@ const CourseLearning = () => {
               variant="outlined" 
             />
             <Chip 
-              icon={<Quiz />} 
-              label={`${quizzes.length} Quizzes`} 
-              color="info" 
-              variant="outlined" 
-            />
-            <Chip 
               icon={<VideoLibrary />} 
               label={`${videos.length} Videos`} 
               color="success" 
@@ -537,7 +518,6 @@ const CourseLearning = () => {
           <Tab label="All" icon={<MenuBook />} iconPosition="start" />
           <Tab label="Lessons" icon={<MenuBook />} iconPosition="start" />
           <Tab label="Assignments" icon={<Assignment />} iconPosition="start" />
-          <Tab label="Quizzes" icon={<Quiz />} iconPosition="start" />
           <Tab label="Videos" icon={<VideoLibrary />} iconPosition="start" />
           <Tab label="Documents" icon={<Description />} iconPosition="start" />
         </Tabs>
@@ -580,19 +560,8 @@ const CourseLearning = () => {
             </Box>
           )}
 
-          {tabValue === 3 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Quizzes
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Test your knowledge with interactive quizzes.
-              </Typography>
-              {renderMaterialList(quizzes.map(quiz => ({ ...quiz, type: 'quiz' })))}
-            </Box>
-          )}
 
-          {tabValue === 4 && (
+          {tabValue === 3 && (
             <Box>
               <Typography variant="h6" gutterBottom>
                 Videos
@@ -604,7 +573,7 @@ const CourseLearning = () => {
             </Box>
           )}
 
-          {tabValue === 5 && (
+          {tabValue === 4 && (
             <Box>
               <Typography variant="h6" gutterBottom>
                 Documents
@@ -665,7 +634,6 @@ const CourseLearning = () => {
                   <>
                     {selectedMaterial.type === 'lesson' && <MenuBook />}
                     {selectedMaterial.type === 'assignment' && <Assignment />}
-                    {selectedMaterial.type === 'quiz' && <Quiz />}
                     {selectedMaterial.type === 'video' && <VideoLibrary />}
                     {selectedMaterial.type === 'document' && <Description />}
                   </>
@@ -830,55 +798,6 @@ const CourseLearning = () => {
                     </Box>
                   )}
 
-                  {selectedMaterial?.type === 'quiz' && (
-                    <Box sx={{ p: 3, height: '100%' }}>
-                      <Typography variant="h6" gutterBottom>
-                        Quiz Details
-                      </Typography>
-                      <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
-                        {materialContent.description}
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
-                        <Chip
-                          label={`Time Limit: ${materialContent.timeLimit} minutes`}
-                          color="primary"
-                          variant="outlined"
-                        />
-                        <Chip
-                          label={`Max Attempts: ${materialContent.maxAttempts}`}
-                          color="secondary"
-                          variant="outlined"
-                        />
-                        <Chip
-                          label={`Questions: ${materialContent.totalQuestions}`}
-                          color="info"
-                          variant="outlined"
-                        />
-                        <Chip
-                          label={`Passing Score: ${materialContent.passingScore}%`}
-                          color="success"
-                          variant="outlined"
-                        />
-                      </Box>
-                      
-                      {materialContent.availableFrom && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          Available from: {new Date(materialContent.availableFrom).toLocaleString()}
-                        </Typography>
-                      )}
-                      
-                      {materialContent.availableUntil && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Available until: {new Date(materialContent.availableUntil).toLocaleString()}
-                        </Typography>
-                      )}
-                      
-                      <Button variant="contained" size="large">
-                        Start Quiz
-                      </Button>
-                    </Box>
-                  )}
 
                   {selectedMaterial?.type === 'video' && (
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -1056,6 +975,7 @@ const CourseLearning = () => {
                       </Box>
                     </Box>
                   )}
+
 
                   {selectedMaterial?.type === 'document' && (
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

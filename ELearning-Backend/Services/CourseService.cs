@@ -94,7 +94,6 @@ namespace ELearning.API.Services
                 .Include(c => c.Category)
                 .Include(c => c.Lessons)
                 .Include(c => c.Assignments)
-                .Include(c => c.Quizzes)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
