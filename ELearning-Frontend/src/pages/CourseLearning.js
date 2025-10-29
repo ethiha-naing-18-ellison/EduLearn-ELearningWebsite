@@ -48,7 +48,8 @@ import {
   PlayArrow,
   Pause,
   VolumeUp,
-  VolumeOff
+  VolumeOff,
+  Quiz
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -63,6 +64,7 @@ const CourseLearning = () => {
   const [assignments, setAssignments] = useState([]);
   const [videos, setVideos] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [multipleChoices, setMultipleChoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
@@ -124,12 +126,13 @@ const CourseLearning = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
-      const [courseRes, lessonsRes, assignmentsRes, videosRes, documentsRes] = await Promise.all([
+      const [courseRes, lessonsRes, assignmentsRes, videosRes, documentsRes, multipleChoicesRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/courses/${id}`),
         axios.get(`http://localhost:5000/api/lessons/course/${id}`),
         axios.get(`http://localhost:5000/api/assignments/course/${id}`),
         axios.get(`http://localhost:5000/api/videos/course/${id}`),
-        axios.get(`http://localhost:5000/api/documents/course/${id}`)
+        axios.get(`http://localhost:5000/api/documents/course/${id}`),
+        axios.get(`http://localhost:5000/api/multiplechoices/course/${id}`)
       ]);
       
       setCourse(courseRes.data);
@@ -137,6 +140,7 @@ const CourseLearning = () => {
       setAssignments(assignmentsRes.data);
       setVideos(videosRes.data);
       setDocuments(documentsRes.data);
+      setMultipleChoices(multipleChoicesRes.data);
     } catch (error) {
       console.error('Error fetching course data:', error);
     } finally {
@@ -188,6 +192,14 @@ const CourseLearning = () => {
             }
           });
           content = documentResponse.data;
+          break;
+        case 'multiplechoice':
+          const multipleChoiceResponse = await axios.get(`http://localhost:5000/api/multiplechoices/${material.id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          content = multipleChoiceResponse.data;
           break;
         default:
           content = material;
@@ -303,6 +315,10 @@ const CourseLearning = () => {
     }
   };
 
+  const getQuizIcon = () => {
+    return <Quiz color="info" />;
+  };
+
   // Sort lessons by order
   const sortedLessons = [...lessons].sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -311,8 +327,9 @@ const CourseLearning = () => {
     ...sortedLessons.map(lesson => ({ ...lesson, type: 'lesson', materialType: 'Lesson' })),
     ...assignments.map(assignment => ({ ...assignment, type: 'assignment', materialType: 'Assignment' })),
     ...videos.map(video => ({ ...video, type: 'video', materialType: 'Video' })),
-    ...documents.map(document => ({ ...document, type: 'document', materialType: 'Document' }))
-  ].sort((a, b) => (a.order || 0) - (b.order || 0));
+    ...documents.map(document => ({ ...document, type: 'document', materialType: 'Document' })),
+    ...multipleChoices.map(mc => ({ ...mc, type: 'multiplechoice', materialType: 'Quiz' }))
+  ].sort((a, b) => (a.orderIndex || a.order || 0) - (b.orderIndex || b.order || 0));
 
   if (loading || enrollmentLoading) {
     return (
@@ -381,6 +398,7 @@ const CourseLearning = () => {
             {material.type === 'assignment' && <Assignment color="secondary" />}
             {material.type === 'video' && getVideoTypeIcon(material.videoType)}
             {material.type === 'document' && getDocumentTypeIcon(material.documentType)}
+            {material.type === 'multiplechoice' && getQuizIcon()}
           </ListItemIcon>
           <ListItemText
             primary={
@@ -411,14 +429,24 @@ const CourseLearning = () => {
                     Due: {new Date(material.dueDate).toLocaleDateString()}
                   </Typography>
                 )}
-                {material.totalQuestions && (
+                {material.questions && material.questions.length > 0 && (
                   <Typography variant="body2" color="text.secondary">
-                    {material.totalQuestions} questions
+                    {material.questions.length} questions
                   </Typography>
                 )}
                 {material.fileSize && (
                   <Typography variant="body2" color="text.secondary">
                     {(material.fileSize / 1024 / 1024).toFixed(1)} MB
+                  </Typography>
+                )}
+                {material.totalPoints && (
+                  <Typography variant="body2" color="text.secondary">
+                    {material.totalPoints} points
+                  </Typography>
+                )}
+                {material.timeLimit && (
+                  <Typography variant="body2" color="text.secondary">
+                    {material.timeLimit} min
                   </Typography>
                 )}
                 {material.isFree && (
@@ -502,6 +530,12 @@ const CourseLearning = () => {
               color="warning" 
               variant="outlined" 
             />
+            <Chip 
+              icon={<Quiz />} 
+              label={`${multipleChoices.length} Quizzes`} 
+              color="info" 
+              variant="outlined" 
+            />
           </Box>
         </CardContent>
       </Card>
@@ -520,6 +554,7 @@ const CourseLearning = () => {
           <Tab label="Assignments" icon={<Assignment />} iconPosition="start" />
           <Tab label="Videos" icon={<VideoLibrary />} iconPosition="start" />
           <Tab label="Documents" icon={<Description />} iconPosition="start" />
+          <Tab label="Quizzes" icon={<Quiz />} iconPosition="start" />
         </Tabs>
 
         {/* Tab Content */}
@@ -584,6 +619,18 @@ const CourseLearning = () => {
               {renderMaterialList(documents.map(document => ({ ...document, type: 'document' })))}
             </Box>
           )}
+
+          {tabValue === 5 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Quizzes
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Test your knowledge with interactive quiz questions.
+              </Typography>
+              {renderMaterialList(multipleChoices.map(mc => ({ ...mc, type: 'multiplechoice' })))}
+            </Box>
+          )}
         </Box>
       </Paper>
 
@@ -636,6 +683,7 @@ const CourseLearning = () => {
                     {selectedMaterial.type === 'assignment' && <Assignment />}
                     {selectedMaterial.type === 'video' && <VideoLibrary />}
                     {selectedMaterial.type === 'document' && <Description />}
+                    {selectedMaterial.type === 'multiplechoice' && <Quiz />}
                   </>
                 )}
                 <Typography variant="h5" component="h2">
@@ -1075,6 +1123,218 @@ const CourseLearning = () => {
                           </Box>
                         )}
                       </Box>
+                    </Box>
+                  )}
+
+                  {selectedMaterial?.type === 'multiplechoice' && (
+                    <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+                      {/* Quiz Header */}
+                      <Box sx={{ mb: 4 }}>
+                        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          {materialContent.title}
+                        </Typography>
+                        {materialContent.description && (
+                          <Typography variant="body1" sx={{ mb: 2, color: 'text.secondary' }}>
+                            {materialContent.description}
+                          </Typography>
+                        )}
+                        {materialContent.instructions && (
+                          <Box sx={{ p: 2, bgcolor: 'info.light', borderRadius: 1, mb: 3 }}>
+                            <Typography variant="h6" gutterBottom sx={{ color: 'info.dark' }}>
+                              Instructions
+                            </Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                              {materialContent.instructions}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {/* Quiz Info Chips */}
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+                          <Chip
+                            icon={<Quiz />}
+                            label={`${materialContent.questions?.length || 0} Questions`}
+                            color="primary"
+                            variant="filled"
+                          />
+                          <Chip
+                            label={`${materialContent.totalPoints} Total Points`}
+                            color="secondary"
+                            variant="filled"
+                          />
+                          {materialContent.timeLimit && (
+                            <Chip
+                              label={`${materialContent.timeLimit} Minutes`}
+                              color="info"
+                              variant="filled"
+                            />
+                          )}
+                          {materialContent.maxAttempts && (
+                            <Chip
+                              label={`${materialContent.maxAttempts} Max Attempts`}
+                              color="warning"
+                              variant="filled"
+                            />
+                          )}
+                          {materialContent.passingScore && (
+                            <Chip
+                              label={`${materialContent.passingScore}% Passing Score`}
+                              color="success"
+                              variant="filled"
+                            />
+                          )}
+                          {materialContent.isFree && (
+                            <Chip label="Free Quiz" color="success" variant="outlined" />
+                          )}
+                        </Box>
+                      </Box>
+
+                      {/* Quiz Questions */}
+                      {materialContent.questions && materialContent.questions.length > 0 ? (
+                        <Box>
+                          <Typography variant="h5" gutterBottom sx={{ mb: 3, color: 'text.primary' }}>
+                            Quiz Questions
+                          </Typography>
+                          {materialContent.questions.map((question, index) => (
+                            <Card key={question.id} sx={{ mb: 3, p: 3, border: 1, borderColor: 'grey.200' }}>
+                              <Box sx={{ mb: 3 }}>
+                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Chip 
+                                    label={`Question ${index + 1}`} 
+                                    size="small" 
+                                    color="primary" 
+                                    variant="outlined"
+                                  />
+                                  <Typography variant="body2" color="text.secondary">
+                                    ({question.points} points)
+                                  </Typography>
+                                </Typography>
+                                <Typography variant="body1" sx={{ mb: 3, fontWeight: 500 }}>
+                                  {question.questionText}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ pl: 2 }}>
+                                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                                  Select your answer:
+                                </Typography>
+                                
+                                {/* Option A */}
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  mb: 2, 
+                                  p: 2, 
+                                  border: 1, 
+                                  borderColor: 'grey.300', 
+                                  borderRadius: 1, 
+                                  cursor: 'pointer', 
+                                  '&:hover': { bgcolor: 'grey.50' },
+                                  transition: 'all 0.2s'
+                                }}>
+                                  <Typography variant="body1" sx={{ mr: 2, fontWeight: 'bold', minWidth: '24px' }}>A.</Typography>
+                                  <Typography variant="body1">{question.optionA}</Typography>
+                                </Box>
+                                
+                                {/* Option B */}
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  mb: 2, 
+                                  p: 2, 
+                                  border: 1, 
+                                  borderColor: 'grey.300', 
+                                  borderRadius: 1, 
+                                  cursor: 'pointer', 
+                                  '&:hover': { bgcolor: 'grey.50' },
+                                  transition: 'all 0.2s'
+                                }}>
+                                  <Typography variant="body1" sx={{ mr: 2, fontWeight: 'bold', minWidth: '24px' }}>B.</Typography>
+                                  <Typography variant="body1">{question.optionB}</Typography>
+                                </Box>
+                                
+                                {/* Option C */}
+                                {question.optionC && (
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    mb: 2, 
+                                    p: 2, 
+                                    border: 1, 
+                                    borderColor: 'grey.300', 
+                                    borderRadius: 1, 
+                                    cursor: 'pointer', 
+                                    '&:hover': { bgcolor: 'grey.50' },
+                                    transition: 'all 0.2s'
+                                  }}>
+                                    <Typography variant="body1" sx={{ mr: 2, fontWeight: 'bold', minWidth: '24px' }}>C.</Typography>
+                                    <Typography variant="body1">{question.optionC}</Typography>
+                                  </Box>
+                                )}
+                                
+                                {/* Option D */}
+                                {question.optionD && (
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    mb: 2, 
+                                    p: 2, 
+                                    border: 1, 
+                                    borderColor: 'grey.300', 
+                                    borderRadius: 1, 
+                                    cursor: 'pointer', 
+                                    '&:hover': { bgcolor: 'grey.50' },
+                                    transition: 'all 0.2s'
+                                  }}>
+                                    <Typography variant="body1" sx={{ mr: 2, fontWeight: 'bold', minWidth: '24px' }}>D.</Typography>
+                                    <Typography variant="body1">{question.optionD}</Typography>
+                                  </Box>
+                                )}
+                              </Box>
+                              
+                              {/* Question Explanation */}
+                              {question.explanation && (
+                                <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                  <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>
+                                    Explanation
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                    {question.explanation}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Card>
+                          ))}
+                          
+                          {/* Quiz Actions */}
+                          <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center' }}>
+                            <Button 
+                              variant="contained" 
+                              size="large"
+                              sx={{ px: 4, py: 1.5 }}
+                            >
+                              Start Quiz
+                            </Button>
+                            <Button 
+                              variant="outlined" 
+                              size="large"
+                              sx={{ px: 4, py: 1.5 }}
+                            >
+                              Preview Quiz
+                            </Button>
+                          </Box>
+                        </Box>
+                      ) : (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Quiz sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
+                          <Typography variant="h6" color="text.secondary" gutterBottom>
+                            No questions available
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            This quiz doesn't have any questions yet.
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                   )}
                 </Box>

@@ -56,6 +56,19 @@ namespace ELearning.API.Mapping
             CreateMap<CreateDocumentDto, Document>();
             CreateMap<UpdateDocumentDto, Document>();
 
+            // MultipleChoice mappings
+            CreateMap<MultipleChoice, MultipleChoiceDto>();
+            CreateMap<CreateMultipleChoiceDto, MultipleChoice>();
+            CreateMap<UpdateMultipleChoiceDto, MultipleChoice>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.Questions, opt => opt.Ignore());
+
+            // MultipleChoiceQuestion mappings
+            CreateMap<MultipleChoiceQuestion, MultipleChoiceQuestionDto>();
+            CreateMap<CreateMultipleChoiceQuestionDto, MultipleChoiceQuestion>();
+            CreateMap<UpdateMultipleChoiceQuestionDto, MultipleChoiceQuestion>();
+
             // Submission mappings
             CreateMap<Submission, SubmissionDto>()
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));

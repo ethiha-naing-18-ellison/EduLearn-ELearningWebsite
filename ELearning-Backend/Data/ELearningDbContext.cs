@@ -18,6 +18,8 @@ namespace ELearning.API.Data
         public DbSet<Submission> Submissions { get; set; }
         public DbSet<Video> Videos { get; set; }
         public DbSet<Document> Documents { get; set; }
+        public DbSet<MultipleChoice> MultipleChoices { get; set; }
+        public DbSet<MultipleChoiceQuestion> MultipleChoiceQuestions { get; set; }
         public DbSet<Progress> Progress { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
 
@@ -158,6 +160,35 @@ namespace ELearning.API.Data
                 entity.HasOne(e => e.Course)
                       .WithMany(c => c.Documents)
                       .HasForeignKey(e => e.CourseId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // MultipleChoice configuration
+            modelBuilder.Entity<MultipleChoice>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.Instructions).HasMaxLength(1000);
+                entity.HasOne(e => e.Course)
+                      .WithMany(c => c.MultipleChoices)
+                      .HasForeignKey(e => e.CourseId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // MultipleChoiceQuestion configuration
+            modelBuilder.Entity<MultipleChoiceQuestion>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.QuestionText).IsRequired();
+                entity.Property(e => e.QuestionType).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.OptionA).HasMaxLength(500);
+                entity.Property(e => e.OptionB).HasMaxLength(500);
+                entity.Property(e => e.OptionC).HasMaxLength(500);
+                entity.Property(e => e.OptionD).HasMaxLength(500);
+                entity.Property(e => e.CorrectAnswer).HasMaxLength(10);
+                entity.HasOne(e => e.MultipleChoice)
+                      .WithMany(mc => mc.Questions)
+                      .HasForeignKey(e => e.MultipleChoiceId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
