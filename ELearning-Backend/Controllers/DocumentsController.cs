@@ -50,6 +50,8 @@ namespace ELearning.API.Controllers
         }
 
         [HttpPost("upload")]
+        [RequestSizeLimit(500 * 1024 * 1024)] // 500MB limit
+        [RequestFormLimits(MultipartBodyLengthLimit = 500 * 1024 * 1024)] // 500MB limit
         public async Task<ActionResult<DocumentDto>> UploadDocument([FromForm] CreateDocumentDto createDocumentDto, IFormFile? documentFile)
         {
             try
@@ -198,7 +200,7 @@ namespace ELearning.API.Controllers
                 }
 
                 // Check if document has a file path or URL
-                string filePath = null;
+                string? filePath = null;
                 string fileName = $"{document.Title}.{document.FileFormat?.ToLower() ?? "pdf"}";
 
                 if (!string.IsNullOrEmpty(document.DocumentFile))
@@ -245,7 +247,7 @@ namespace ELearning.API.Controllers
 
                 // Get the file content
                 var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-                var contentType = GetContentType(document.FileFormat);
+                var contentType = GetContentType(document.FileFormat ?? "PDF");
 
                 return File(fileBytes, contentType, fileName);
             }

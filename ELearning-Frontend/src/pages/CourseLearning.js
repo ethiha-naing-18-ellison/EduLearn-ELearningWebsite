@@ -710,7 +710,7 @@ const CourseLearning = () => {
                         {materialContent.content}
                       </Typography>
                       
-                      {materialContent.videoUrl && (
+                      {(materialContent.videoUrl || materialContent.videoFile) && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="h6" gutterBottom>
                             Video
@@ -725,14 +725,25 @@ const CourseLearning = () => {
                               overflow: 'hidden',
                             }}
                           >
-                            <iframe
-                              src={getEmbedUrl(materialContent.videoUrl)}
-                              width="100%"
-                              height="100%"
-                              frameBorder="0"
-                              allowFullScreen
-                              title={materialContent.title}
-                            />
+                            {materialContent.videoUrl ? (
+                              <iframe
+                                src={getEmbedUrl(materialContent.videoUrl)}
+                                width="100%"
+                                height="100%"
+                                frameBorder="0"
+                                allowFullScreen
+                                title={materialContent.title}
+                              />
+                            ) : (
+                              <video
+                                controls
+                                width="100%"
+                                height="100%"
+                              >
+                                <source src={`http://localhost:5000/api/videos/${materialContent.id}/stream`} type="video/mp4" />
+                                Your browser does not support the video tag.
+                              </video>
+                            )}
                           </Box>
                         </Box>
                       )}
@@ -886,16 +897,28 @@ const CourseLearning = () => {
                           boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
                         }}
                       >
-                        {materialContent.videoUrl ? (
-                          <iframe
-                            src={getEmbedUrl(materialContent.videoUrl)}
-                            width="100%"
-                            height="100%"
-                            frameBorder="0"
-                            allowFullScreen
-                            title={materialContent.title}
-                            style={{ borderRadius: '4px' }}
-                          />
+                        {(materialContent.videoUrl || materialContent.videoFile) ? (
+                          materialContent.videoUrl ? (
+                            <iframe
+                              src={getEmbedUrl(materialContent.videoUrl)}
+                              width="100%"
+                              height="100%"
+                              frameBorder="0"
+                              allowFullScreen
+                              title={materialContent.title}
+                              style={{ borderRadius: '4px' }}
+                            />
+                          ) : (
+                            <video
+                              controls
+                              width="100%"
+                              height="100%"
+                              style={{ borderRadius: '4px' }}
+                            >
+                              <source src={`http://localhost:5000/api/videos/${materialContent.id}/stream`} type="video/mp4" />
+                              Your browser does not support the video tag.
+                            </video>
+                          )
                         ) : (
                           <Box sx={{ textAlign: 'center', color: 'white', p: 4 }}>
                             <VideoLibrary sx={{ fontSize: 80, mb: 2, opacity: 0.7 }} />
