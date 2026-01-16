@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -49,7 +49,8 @@ import {
   Pause,
   VolumeUp,
   VolumeOff,
-  Quiz
+  Quiz,
+  TaskAlt
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -84,11 +85,65 @@ const CourseLearning = () => {
   const [quizAttempts, setQuizAttempts] = useState({}); // Store attempt counts for each quiz
   const [quizCanRetake, setQuizCanRetake] = useState({}); // Store if user can retake each quiz
   const [quizStartTime, setQuizStartTime] = useState({}); // Track when quiz was started
+  const [materialCompletions, setMaterialCompletions] = useState({}); // Track completion status: { "video_1": true, "document_2": true, etc. }
+
+  const fetchMaterialCompletions = useCallback(async () => {
+    if (!user || !id) {
+      console.log('Cannot fetch completions - missing user or id:', { user: !!user, id });
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token found, cannot fetch completions');
+        return;
+      }
+      
+      console.log('Fetching material completions for course:', id, 'user:', user.id);
+      const response = await axios.get(`http://localhost:5000/api/materialcompletions/course/${id}/completions`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      console.log('Material completions fetched:', response.data);
+      // The API returns a dictionary like { "video_1": true, "document_2": true }
+      const completions = response.data || {};
+      console.log('Setting material completions:', completions);
+      console.log('Number of completions:', Object.keys(completions).length);
+      console.log('Completion keys:', Object.keys(completions));
+      // Force update to ensure state is set
+      setMaterialCompletions({ ...completions });
+    } catch (error) {
+      console.error('Error fetching material completions:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      // Set to empty object on error to avoid stale data
+      setMaterialCompletions({});
+    }
+  }, [user, id]);
 
   useEffect(() => {
     fetchCourseData();
     checkEnrollment();
   }, [id, user]);
+
+  // Fetch material completions after course data is loaded and user is available
+  useEffect(() => {
+    const loadCompletions = async () => {
+      if (user && id && !loading) {
+        console.log('useEffect: Fetching material completions - user:', user.id, 'course:', id, 'loading:', loading);
+        await fetchMaterialCompletions();
+      }
+    };
+    loadCompletions();
+  }, [user?.id, id, loading, fetchMaterialCompletions]);
+
+  // Mark lesson as complete when content is loaded
+  useEffect(() => {
+    if (selectedMaterial?.type === 'lesson' && materialContent?.id) {
+      markMaterialComplete('lesson', materialContent.id);
+    }
+  }, [materialContent, selectedMaterial]);
 
   // Refresh enrollment status when page becomes visible again
   useEffect(() => {
@@ -156,6 +211,66 @@ const CourseLearning = () => {
     }
   };
 
+  const markMaterialComplete = async (materialType, materialId) => {
+    if (!user || !id) return;
+    try {
+      // Normalize material type names
+      let normalizedType = materialType;
+      if (materialType === 'quiz' || materialType === 'multiplechoice') {
+        normalizedType = 'multiplechoice';
+      } else if (materialType === 'lesson') {
+        normalizedType = 'lesson';
+      }
+      
+      const key = `${normalizedType}_${materialId}`;
+      // Only mark if not already completed
+      if (materialCompletions[key]) {
+        console.log('Material already marked as complete');
+        return;
+      }
+      
+      console.log('Marking material as complete:', { normalizedType, materialId, courseId: id });
+      const response = await axios.post('http://localhost:5000/api/materialcompletions/mark-complete', {
+        courseId: parseInt(id),
+        materialType: normalizedType,
+        materialId: materialId
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      console.log('Material marked as complete:', response.data);
+      
+      // Update local state immediately
+      setMaterialCompletions(prev => ({
+        ...prev,
+        [key]: true
+      }));
+      
+      // Also refresh from server to ensure consistency
+      await fetchMaterialCompletions();
+    } catch (error) {
+      console.error('Error marking material as complete:', error);
+      console.error('Error response:', error.response?.data);
+    }
+  };
+
+  const isMaterialComplete = (materialType, materialId) => {
+    if (!materialId) return false;
+    
+    // Normalize material type names
+    let normalizedType = materialType;
+    if (materialType === 'quiz' || materialType === 'multiplechoice') {
+      normalizedType = 'multiplechoice';
+    } else if (materialType === 'lesson') {
+      normalizedType = 'lesson';
+    }
+    const key = `${normalizedType}_${materialId}`;
+    const isComplete = materialCompletions[key] === true;
+    return isComplete;
+  };
+
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
@@ -198,6 +313,11 @@ const CourseLearning = () => {
       setContentLoading(true);
       setSelectedMaterial(material);
       setModalOpen(true);
+      
+      // Refresh completions when opening a material
+      if (user && id) {
+        await fetchMaterialCompletions();
+      }
       
       // If it's a quiz, check attempts
       if (type === 'multiplechoice') {
@@ -371,6 +491,9 @@ const CourseLearning = () => {
         ...prev,
         [quizId]: true
       }));
+
+      // Mark quiz as complete
+      await markMaterialComplete('multiplechoice', quizId);
 
       alert(`Quiz submitted! Score: ${result.score}/${result.totalPoints} (${result.percentage}%)`);
     } catch (error) {
@@ -636,7 +759,11 @@ const CourseLearning = () => {
             }
           />
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <CheckCircle color="success" />
+            {isMaterialComplete(material.type, material.id) ? (
+              <CheckCircle color="success" />
+            ) : (
+              <CheckCircle sx={{ color: 'grey.400' }} />
+            )}
           </Box>
         </ListItem>
       ))}
@@ -1139,6 +1266,33 @@ const CourseLearning = () => {
                           )}
                         </Box>
                         
+                        {/* Mark as Done Button */}
+                        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                          {isMaterialComplete('video', materialContent.id) ? (
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="large"
+                              startIcon={<CheckCircle />}
+                              disabled
+                              sx={{ minWidth: 200 }}
+                            >
+                              Completed
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="large"
+                              startIcon={<TaskAlt />}
+                              onClick={() => markMaterialComplete('video', materialContent.id)}
+                              sx={{ minWidth: 200 }}
+                            >
+                              Mark as Done
+                            </Button>
+                          )}
+                        </Box>
+                        
                         {(materialContent.transcript || materialContent.notes) && (
                           <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
                             {materialContent.transcript && (
@@ -1215,33 +1369,174 @@ const CourseLearning = () => {
                           alignItems: 'center',
                           justifyContent: 'center',
                           bgcolor: 'grey.100',
+                          position: 'relative',
+                          overflow: 'hidden',
                         }}
                       >
-                        {materialContent.documentUrl ? (
-                          <iframe
-                            src={materialContent.documentUrl}
-                            width="100%"
-                            height="100%"
-                            title={materialContent.title}
-                          />
-                        ) : (
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Description sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
-                            <Typography variant="h6" color="text.secondary">
-                              Document preview not available
-                            </Typography>
-                            <Button
-                              variant="contained"
-                              startIcon={<Download />}
-                              href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              sx={{ mt: 2 }}
-                            >
-                              Download Document
-                            </Button>
-                          </Box>
-                        )}
+                        {(() => {
+                          const fileFormat = (materialContent.fileFormat || '').toLowerCase();
+                          const canViewInline = ['pdf', 'txt', 'html'].includes(fileFormat);
+                          const viewUrl = materialContent.documentUrl || 
+                                         (materialContent.documentFile || materialContent.id 
+                                          ? `http://localhost:5000/api/documents/${materialContent.id}/view` 
+                                          : null);
+                          
+                          if (viewUrl && canViewInline) {
+                            // PDF and text files can be viewed directly in browser
+                            if (fileFormat === 'pdf') {
+                              return (
+                                <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                  <iframe
+                                    src={viewUrl}
+                                    width="100%"
+                                    height="100%"
+                                    title={materialContent.title}
+                                    style={{ border: 'none', flex: 1 }}
+                                  />
+                                  <Box sx={{ p: 1, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<Download />}
+                                      href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      Download PDF
+                                    </Button>
+                                  </Box>
+                                </Box>
+                              );
+                            } else if (fileFormat === 'txt' || fileFormat === 'html') {
+                              return (
+                                <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                  <iframe
+                                    src={viewUrl}
+                                    width="100%"
+                                    height="100%"
+                                    title={materialContent.title}
+                                    style={{ border: 'none', flex: 1 }}
+                                  />
+                                  <Box sx={{ p: 1, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<Download />}
+                                      href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      Download
+                                    </Button>
+                                  </Box>
+                                </Box>
+                              );
+                            }
+                          } else if (viewUrl && ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(fileFormat)) {
+                            // Office documents - try to use viewer if documentUrl is external, otherwise show download option
+                            if (materialContent.documentUrl && !materialContent.documentUrl.includes('localhost')) {
+                              // External URL - can use Office Online Viewer
+                              const encodedUrl = encodeURIComponent(materialContent.documentUrl);
+                              const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodedUrl}`;
+                              
+                              return (
+                                <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                  <iframe
+                                    src={officeViewerUrl}
+                                    width="100%"
+                                    height="100%"
+                                    title={materialContent.title}
+                                    style={{ border: 'none', flex: 1 }}
+                                  />
+                                  <Box sx={{ p: 1, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<Download />}
+                                      href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      Download
+                                    </Button>
+                                  </Box>
+                                </Box>
+                              );
+                            } else {
+                              // Local file - Office Online Viewer doesn't work with localhost, show download option
+                              return (
+                                <Box sx={{ textAlign: 'center', p: 4 }}>
+                                  <Description sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
+                                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                                    {materialContent.fileFormat?.toUpperCase()} Document
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                    This document format cannot be viewed directly in the browser. 
+                                    Please download it to view using Microsoft Office or compatible software.
+                                  </Typography>
+                                  <Button
+                                    variant="contained"
+                                    size="large"
+                                    startIcon={<Download />}
+                                    href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Download {materialContent.fileFormat?.toUpperCase()} Document
+                                  </Button>
+                                </Box>
+                              );
+                            }
+                          } else if (viewUrl) {
+                            // Try to view other formats
+                            return (
+                              <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <iframe
+                                  src={viewUrl}
+                                  width="100%"
+                                  height="100%"
+                                  title={materialContent.title}
+                                  style={{ border: 'none', flex: 1 }}
+                                />
+                                <Box sx={{ p: 1, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<Download />}
+                                    href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Download
+                                  </Button>
+                                </Box>
+                              </Box>
+                            );
+                          } else {
+                            // No view URL available
+                            return (
+                              <Box sx={{ textAlign: 'center' }}>
+                                <Description sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
+                                <Typography variant="h6" color="text.secondary" gutterBottom>
+                                  Document preview not available
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                  This document cannot be viewed in the browser. Please download it to view.
+                                </Typography>
+                                <Button
+                                  variant="contained"
+                                  startIcon={<Download />}
+                                  href={`http://localhost:5000/api/documents/${materialContent.id}/download`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  sx={{ mt: 2 }}
+                                >
+                                  Download Document
+                                </Button>
+                              </Box>
+                            );
+                          }
+                        })()}
                       </Box>
                       
                       {/* Document Details */}
@@ -1291,6 +1586,33 @@ const CourseLearning = () => {
                             </Typography>
                           </Box>
                         )}
+                        
+                        {/* Mark as Done Button */}
+                        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                          {isMaterialComplete('document', materialContent.id) ? (
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="large"
+                              startIcon={<CheckCircle />}
+                              disabled
+                              sx={{ minWidth: 200 }}
+                            >
+                              Completed
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="large"
+                              startIcon={<TaskAlt />}
+                              onClick={() => markMaterialComplete('document', materialContent.id)}
+                              sx={{ minWidth: 200 }}
+                            >
+                              Mark as Done
+                            </Button>
+                          )}
+                        </Box>
                         
                         {materialContent.notes && (
                           <Box sx={{ mb: 2 }}>

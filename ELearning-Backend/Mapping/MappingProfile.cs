@@ -82,6 +82,9 @@ namespace ELearning.API.Mapping
 
             // Certificate mappings
             CreateMap<Certificate, CertificateDto>();
+
+            // MaterialCompletion mappings
+            CreateMap<MaterialCompletion, MaterialCompletionDto>();
         }
     }
 }

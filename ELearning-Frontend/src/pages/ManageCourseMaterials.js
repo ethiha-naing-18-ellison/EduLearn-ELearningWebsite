@@ -14,6 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
   ListItemSecondaryAction,
   IconButton,
   Chip,
@@ -45,7 +46,8 @@ import {
   Description,
   CloudUpload,
   MenuBook,
-  Quiz
+  Quiz,
+  DragIndicator
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -75,6 +77,8 @@ const ManageCourseMaterials = () => {
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [viewingItem, setViewingItem] = useState(null);
   const [viewingType, setViewingType] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   useEffect(() => {
     fetchCourseData();
@@ -349,6 +353,100 @@ const ManageCourseMaterials = () => {
     setViewingItem(item);
     setViewingType(type);
     setOpenViewDialog(true);
+  };
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    try {
+      const draggedMaterial = generalMaterials[draggedIndex];
+      const targetMaterial = generalMaterials[dropIndex];
+      
+      // Calculate new orders based on position
+      // We'll assign sequential orders starting from 1
+      const newMaterials = [...generalMaterials];
+      const [removed] = newMaterials.splice(draggedIndex, 1);
+      newMaterials.splice(dropIndex, 0, removed);
+      
+      // Update orders for all affected materials
+      const updates = [];
+      
+      for (let i = Math.min(draggedIndex, dropIndex); i <= Math.max(draggedIndex, dropIndex); i++) {
+        const material = newMaterials[i];
+        const newOrder = i + 1;
+        const currentOrder = material.orderIndex || material.order || 0;
+        
+        if (currentOrder !== newOrder) {
+          const endpoint = material.type === 'lesson' ? 'lessons' : 
+                         material.type === 'assignment' ? 'assignments' : 
+                         material.type === 'video' ? 'videos' : 
+                         material.type === 'document' ? 'documents' :
+                         material.type === 'quiz' || material.type === 'multiplechoice' ? 'multiplechoices' : null;
+          
+          if (!endpoint) continue;
+          
+          let updateData;
+          if (material.type === 'quiz' || material.type === 'multiplechoice') {
+            updateData = {
+              title: material.title,
+              courseId: material.courseId || parseInt(id),
+              orderIndex: newOrder,
+              description: material.description || '',
+              instructions: material.instructions || '',
+              timeLimit: material.timeLimit,
+              isPublished: material.isPublished !== undefined ? material.isPublished : true,
+              isFree: material.isFree !== undefined ? material.isFree : false,
+              allowRetake: material.allowRetake !== undefined ? material.allowRetake : true,
+              maxAttempts: material.maxAttempts || 3,
+              passingScore: material.passingScore || 70,
+              showCorrectAnswers: material.showCorrectAnswers !== undefined ? material.showCorrectAnswers : true,
+              showResultsImmediately: material.showResultsImmediately !== undefined ? material.showResultsImmediately : true,
+              questions: material.questions || []
+            };
+          } else {
+            updateData = { order: newOrder };
+          }
+          
+          updates.push(
+            axios.put(`http://localhost:5000/api/${endpoint}/${material.id}`, updateData)
+          );
+        }
+      }
+      
+      if (updates.length > 0) {
+        await Promise.all(updates);
+        setMessage('Order updated successfully');
+        fetchCourseData();
+      }
+    } catch (error) {
+      console.error('Error reordering material:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error reordering material';
+      setMessage(errorMessage);
+    } finally {
+      setDraggedIndex(null);
+    }
   };
 
   const handleSave = async () => {
@@ -863,11 +961,53 @@ const ManageCourseMaterials = () => {
                 All Course Materials
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Manage all course materials in one place. Click on any item to edit or delete it.
+                Manage all course materials in one place. Drag items using the handle (☰) to reorder them. Click on any item to edit or delete it.
               </Typography>
               <List>
                 {generalMaterials.map((material, index) => (
-                  <ListItem key={`${material.type}-${material.id}`} divider>
+                  <ListItem 
+                    key={`${material.type}-${material.id}`} 
+                    divider
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, index)}
+                    sx={{
+                      cursor: draggedIndex === index ? 'grabbing' : 'grab',
+                      backgroundColor: dragOverIndex === index ? 'action.hover' : 'transparent',
+                      opacity: draggedIndex === index ? 0.6 : 1,
+                      transform: draggedIndex === index ? 'scale(0.98)' : 'scale(1)',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: draggedIndex === index ? 'transparent' : 'action.hover'
+                      }
+                    }}
+                  >
+                    <ListItemIcon 
+                      sx={{ 
+                        minWidth: 60, 
+                        cursor: draggedIndex === index ? 'grabbing' : 'grab',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <DragIndicator 
+                          sx={{ 
+                            color: 'text.secondary', 
+                            cursor: draggedIndex === index ? 'grabbing' : 'grab',
+                            '&:hover': { color: 'primary.main' }
+                          }} 
+                        />
+                        <Chip 
+                          label={index + 1}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ minWidth: 32, fontWeight: 'bold' }}
+                        />
+                      </Box>
+                    </ListItemIcon>
                     <ListItemText
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -882,6 +1022,9 @@ const ManageCourseMaterials = () => {
                       }
                       secondary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Order: {material.orderIndex || material.order || 0}
+                          </Typography>
                           {material.duration && (
                             <Typography variant="body2" color="text.secondary">
                               {material.type === 'video' 

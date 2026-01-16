@@ -187,6 +187,82 @@ namespace ELearning.API.Controllers
             }
         }
 
+        [HttpGet("{id}/view")]
+        public async Task<IActionResult> ViewDocument(int id)
+        {
+            try
+            {
+                var document = await _documentService.GetDocumentByIdAsync(id);
+                
+                if (document == null)
+                {
+                    return NotFound(new { message = "Document not found" });
+                }
+
+                // Check if document has a file path or URL
+                string? filePath = null;
+                string fileName = $"{document.Title}.{document.FileFormat?.ToLower() ?? "pdf"}";
+
+                if (!string.IsNullOrEmpty(document.DocumentFile))
+                {
+                    // If DocumentFile contains a relative path, make it absolute
+                    if (document.DocumentFile.StartsWith("uploads/") || document.DocumentFile.StartsWith("/uploads/"))
+                    {
+                        filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", document.DocumentFile.TrimStart('/'));
+                    }
+                    else if (document.DocumentFile.Contains("/") || document.DocumentFile.Contains("\\"))
+                    {
+                        // If it's already a full path, use it as is
+                        filePath = document.DocumentFile;
+                    }
+                    else
+                    {
+                        // If it's just a filename, look in the documents folder
+                        filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "documents", document.DocumentFile);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(document.DocumentUrl))
+                {
+                    // If it's an external URL, redirect to it for viewing
+                    return Redirect(document.DocumentUrl);
+                }
+                else
+                {
+                    // Both DocumentFile and DocumentUrl are null
+                    Console.WriteLine($"Document has no file path or URL. DocumentFile: {document.DocumentFile}, DocumentUrl: {document.DocumentUrl}");
+                    return NotFound(new { message = "Document file not found. No file path or URL specified for this document." });
+                }
+
+                if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+                {
+                    Console.WriteLine($"Document file not found. FilePath: {filePath}");
+                    Console.WriteLine($"DocumentFile: {document.DocumentFile}");
+                    Console.WriteLine($"Current Directory: {Directory.GetCurrentDirectory()}");
+                    if (!string.IsNullOrEmpty(document.DocumentFile))
+                    {
+                        Console.WriteLine($"Expected path: {Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "documents", document.DocumentFile)}");
+                    }
+                    return NotFound(new { message = $"Document file not found on server. Path: {filePath}" });
+                }
+
+                // Get the file content
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+                var contentType = GetContentType(document.FileFormat ?? "PDF");
+
+                // Return file with inline content disposition for viewing
+                return File(fileBytes, contentType);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { message = "Document not found" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DocumentsController: Error viewing document: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("{id}/download")]
         public async Task<IActionResult> DownloadDocument(int id)
         {
@@ -249,6 +325,7 @@ namespace ELearning.API.Controllers
                 var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
                 var contentType = GetContentType(document.FileFormat ?? "PDF");
 
+                // Return file with attachment content disposition for downloading
                 return File(fileBytes, contentType, fileName);
             }
             catch (KeyNotFoundException)

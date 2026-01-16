@@ -23,6 +23,7 @@ namespace ELearning.API.Data
         public DbSet<MultipleChoiceAttempt> MultipleChoiceAttempts { get; set; }
         public DbSet<Progress> Progress { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
+        public DbSet<MaterialCompletion> MaterialCompletions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -242,6 +243,23 @@ namespace ELearning.API.Data
                       .WithMany(c => c.Certificates)
                       .HasForeignKey(e => e.CourseId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // MaterialCompletion configuration
+            modelBuilder.Entity<MaterialCompletion>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.MaterialType).IsRequired().HasMaxLength(50);
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Course)
+                      .WithMany()
+                      .HasForeignKey(e => e.CourseId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                // Unique constraint: one completion record per user per material
+                entity.HasIndex(e => new { e.UserId, e.CourseId, e.MaterialType, e.MaterialId }).IsUnique();
             });
         }
     }

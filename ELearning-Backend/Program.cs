@@ -72,6 +72,7 @@ builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<IVideoService, VideoService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IMultipleChoiceService, MultipleChoiceService>();
+builder.Services.AddScoped<IMaterialCompletionService, MaterialCompletionService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
