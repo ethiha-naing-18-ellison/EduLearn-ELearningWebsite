@@ -69,6 +69,9 @@ namespace ELearning.API.Mapping
             CreateMap<CreateMultipleChoiceQuestionDto, MultipleChoiceQuestion>();
             CreateMap<UpdateMultipleChoiceQuestionDto, MultipleChoiceQuestion>();
 
+            // MultipleChoiceAttempt mappings
+            CreateMap<MultipleChoiceAttempt, MultipleChoiceAttemptDto>();
+
             // Submission mappings
             CreateMap<Submission, SubmissionDto>()
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));

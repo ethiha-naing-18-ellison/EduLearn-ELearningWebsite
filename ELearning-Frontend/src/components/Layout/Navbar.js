@@ -85,23 +85,24 @@ const Navbar = () => {
 
           {user ? (
             <>
+              {/* My Courses - Show for both Students and Instructors/Admins */}
+              <Button
+                color="inherit"
+                startIcon={<BookOnline />}
+                onClick={handleMyCourses}
+              >
+                My Courses
+              </Button>
+
+              {/* Create Course - Only for Instructors/Admins */}
               {user.role === 'Instructor' || user.role === 'Admin' ? (
-                <>
-                  <Button
-                    color="inherit"
-                    startIcon={<BookOnline />}
-                    onClick={handleMyCourses}
-                  >
-                    My Courses
-                  </Button>
-                  <Button
-                    color="inherit"
-                    startIcon={<Add />}
-                    onClick={handleCreateCourse}
-                  >
-                    Create Course
-                  </Button>
-                </>
+                <Button
+                  color="inherit"
+                  startIcon={<Add />}
+                  onClick={handleCreateCourse}
+                >
+                  Create Course
+                </Button>
               ) : null}
 
               <Button

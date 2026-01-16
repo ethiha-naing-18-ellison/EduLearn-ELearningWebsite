@@ -18,9 +18,7 @@ import {
   Rating,
   Pagination,
   CircularProgress,
-  IconButton,
-  Tabs,
-  Tab
+  IconButton
 } from '@mui/material';
 import {
   Search,
@@ -49,7 +47,8 @@ const MyCourses = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [activeTab, setActiveTab] = useState(0);
+  const isStudent = user?.role === 'Student';
+  const isInstructor = user?.role === 'Instructor' || user?.role === 'Admin';
 
   const fetchMyCourses = useCallback(async () => {
     try {
@@ -80,22 +79,41 @@ const MyCourses = () => {
 
   const fetchEnrolledCourses = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await axios.get('http://localhost:5000/api/enrollments', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
 
-      setEnrolledCourses(response.data);
+      setEnrolledCourses(response.data || []);
     } catch (error) {
       console.error('Error fetching enrolled courses:', error);
+      setEnrolledCourses([]); // Set empty array on error
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchMyCourses();
-    fetchEnrolledCourses();
-  }, [fetchMyCourses, fetchEnrolledCourses]);
+    // Wait for user to be loaded
+    if (!user) {
+      return;
+    }
+
+    // Only fetch created courses if user is instructor/admin
+    if (isInstructor) {
+      fetchMyCourses();
+    }
+    // Only fetch enrolled courses if user is student
+    else if (isStudent) {
+      fetchEnrolledCourses();
+    }
+    // If user role is unknown, set loading to false
+    else {
+      setLoading(false);
+    }
+  }, [user, fetchMyCourses, fetchEnrolledCourses, isInstructor, isStudent]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -159,25 +177,12 @@ const MyCourses = () => {
           My Courses
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Manage and view all the courses you've created and enrolled in
+          {isStudent 
+            ? "View all the courses you've enrolled in"
+            : "Manage and view all the courses you've created"}
         </Typography>
       </Box>
 
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-          <Tab 
-            label="Created Courses" 
-            icon={<Edit />} 
-            iconPosition="start"
-          />
-          <Tab 
-            label="Enrolled Courses" 
-            icon={<School />} 
-            iconPosition="start"
-          />
-        </Tabs>
-      </Box>
 
       {/* Search and Filters */}
       <Card sx={{ mb: 4, p: 3 }}>
@@ -244,8 +249,8 @@ const MyCourses = () => {
         </Grid>
       </Card>
 
-      {/* Courses Grid */}
-      {activeTab === 0 && (
+      {/* Courses Grid - Show created courses for instructors */}
+      {isInstructor && (
         <Grid container spacing={3}>
           {courses.map((course) => (
           <Grid item xs={12} sm={6} md={4} key={course.id}>
@@ -347,10 +352,27 @@ const MyCourses = () => {
         </Grid>
       )}
 
-      {/* Enrolled Courses Grid */}
-      {activeTab === 1 && (
-        <Grid container spacing={3}>
-          {enrolledCourses.map((enrollment) => (
+      {/* Enrolled Courses Grid - Show enrolled courses for students */}
+      {isStudent && (() => {
+        // Filter enrolled courses based on search and filters
+        const filteredEnrolled = enrolledCourses.filter(enrollment => {
+          const course = enrollment.course;
+          if (!course) return false;
+          
+          const matchesSearch = !searchTerm || 
+            course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            course.description?.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          const matchesLevel = !levelFilter || course.level === levelFilter;
+          
+          const matchesCategory = !categoryFilter || course.category?.name === categoryFilter;
+          
+          return matchesSearch && matchesLevel && matchesCategory;
+        });
+
+        return (
+          <Grid container spacing={3}>
+            {filteredEnrolled.map((enrollment) => (
             <Grid item xs={12} sm={6} md={4} key={enrollment.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <CardMedia
@@ -427,12 +449,13 @@ const MyCourses = () => {
                 </CardActions>
               </Card>
             </Grid>
-          ))}
-        </Grid>
-      )}
+            ))}
+          </Grid>
+        );
+      })()}
 
-      {/* Pagination */}
-      {activeTab === 0 && totalPages > 1 && (
+      {/* Pagination - Only for created courses (instructors) */}
+      {isInstructor && totalPages > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <Pagination
             count={totalPages}
@@ -443,7 +466,8 @@ const MyCourses = () => {
         </Box>
       )}
 
-      {activeTab === 0 && courses.length === 0 && !loading && (
+      {/* Empty state for instructors - no created courses */}
+      {isInstructor && courses.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h5" color="text.secondary">
             No courses found
@@ -461,23 +485,55 @@ const MyCourses = () => {
         </Box>
       )}
 
-      {activeTab === 1 && enrolledCourses.length === 0 && !loading && (
+      {/* Empty state for students - no enrolled courses */}
+      {isStudent && (() => {
+        const filteredEnrolled = enrolledCourses.filter(enrollment => {
+          const course = enrollment.course;
+          if (!course) return false;
+          
+          const matchesSearch = !searchTerm || 
+            course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            course.description?.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          const matchesLevel = !levelFilter || course.level === levelFilter;
+          
+          const matchesCategory = !categoryFilter || course.category?.name === categoryFilter;
+          
+          return matchesSearch && matchesLevel && matchesCategory;
+        });
+
+        // Show empty state if no enrolled courses at all, or if filters result in no matches
+        const hasNoEnrolledCourses = enrolledCourses.length === 0;
+        const hasNoFilteredResults = filteredEnrolled.length === 0 && enrolledCourses.length > 0;
+
+        return (hasNoEnrolledCourses || hasNoFilteredResults) && !loading && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h5" color="text.secondary">
-            No enrolled courses
+            {hasNoEnrolledCourses ? 'No enrolled courses' : 'No courses match your filters'}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-            You haven't enrolled in any courses yet. Browse available courses to get started!
+            {hasNoEnrolledCourses 
+              ? "You haven't enrolled in any courses yet. Browse available courses to get started!"
+              : "Try adjusting your search or filter criteria."}
           </Typography>
           <Button
             variant="contained"
             sx={{ mt: 2 }}
-            onClick={() => navigate('/courses')}
+            onClick={() => {
+              if (hasNoEnrolledCourses) {
+                navigate('/courses');
+              } else {
+                setSearchTerm('');
+                setLevelFilter('');
+                setCategoryFilter('');
+              }
+            }}
           >
-            Browse Courses
+            {hasNoEnrolledCourses ? 'Browse Courses' : 'Clear Filters'}
           </Button>
         </Box>
-      )}
+        );
+      })()}
     </Container>
   );
 };

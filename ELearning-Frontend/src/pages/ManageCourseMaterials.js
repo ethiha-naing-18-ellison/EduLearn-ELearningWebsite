@@ -338,7 +338,9 @@ const ManageCourseMaterials = () => {
       fetchCourseData();
     } catch (error) {
       console.error(`Error deleting ${type}:`, error);
-      setMessage(`Error deleting ${type}`);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || `Error deleting ${type}`;
+      setMessage(errorMessage);
+      console.error('Full error response:', error.response?.data);
     }
   };
 
@@ -578,22 +580,31 @@ const ManageCourseMaterials = () => {
         }));
 
         // Ensure all required fields are present for quiz
+        // Use editingItem values as fallback if formData is missing fields
+        const baseData = editingItem || {};
+        const courseIdValue = formData.courseId || baseData.courseId || parseInt(id);
+        
         requestData = {
-          title: formData.title || 'Untitled Quiz',
-          description: formData.description || '',
-          instructions: formData.instructions || '',
-          timeLimit: formData.timeLimit || 10,
-          orderIndex: formData.orderIndex || 1,
-          isFree: formData.isFree || false,
-          isPublished: formData.isPublished !== undefined ? formData.isPublished : true,
-          allowRetake: formData.allowRetake !== undefined ? formData.allowRetake : true,
-          maxAttempts: formData.maxAttempts || 3,
-          passingScore: formData.passingScore || 70,
-          showCorrectAnswers: formData.showCorrectAnswers !== undefined ? formData.showCorrectAnswers : true,
-          showResultsImmediately: formData.showResultsImmediately !== undefined ? formData.showResultsImmediately : true,
-          courseId: formData.courseId,
-          questions: filteredQuestions
+          title: formData.title || baseData.title || 'Untitled Quiz',
+          description: formData.description !== undefined ? formData.description : (baseData.description || ''),
+          instructions: formData.instructions !== undefined ? formData.instructions : (baseData.instructions || ''),
+          timeLimit: formData.timeLimit !== undefined && formData.timeLimit !== null ? formData.timeLimit : (baseData.timeLimit !== undefined && baseData.timeLimit !== null ? baseData.timeLimit : null),
+          orderIndex: formData.orderIndex !== undefined ? formData.orderIndex : (baseData.orderIndex || 1),
+          isFree: formData.isFree !== undefined ? formData.isFree : (baseData.isFree !== undefined ? baseData.isFree : false),
+          isPublished: formData.isPublished !== undefined ? formData.isPublished : (baseData.isPublished !== undefined ? baseData.isPublished : true),
+          allowRetake: formData.allowRetake !== undefined ? formData.allowRetake : (baseData.allowRetake !== undefined ? baseData.allowRetake : true),
+          maxAttempts: formData.maxAttempts !== undefined && formData.maxAttempts !== null ? formData.maxAttempts : (baseData.maxAttempts !== undefined && baseData.maxAttempts !== null ? baseData.maxAttempts : 3),
+          passingScore: formData.passingScore !== undefined && formData.passingScore !== null ? formData.passingScore : (baseData.passingScore !== undefined && baseData.passingScore !== null ? baseData.passingScore : 70),
+          showCorrectAnswers: formData.showCorrectAnswers !== undefined ? formData.showCorrectAnswers : (baseData.showCorrectAnswers !== undefined ? baseData.showCorrectAnswers : true),
+          showResultsImmediately: formData.showResultsImmediately !== undefined ? formData.showResultsImmediately : (baseData.showResultsImmediately !== undefined ? baseData.showResultsImmediately : true),
+          courseId: courseIdValue,
+          questions: filteredQuestions.length > 0 ? filteredQuestions : (baseData.questions || [])
         };
+        
+        // Debug logging
+        console.log('Quiz update - formData:', formData);
+        console.log('Quiz update - editingItem:', editingItem);
+        console.log('Quiz update - requestData:', requestData);
         
         // Validate required fields
         if (!requestData.title.trim()) {
@@ -643,9 +654,24 @@ const ManageCourseMaterials = () => {
       console.error('Error status:', error.response?.status);
       console.error('Error headers:', error.response?.headers);
       console.error('Request data that was sent:', requestData || 'Not available');
+      console.error('Form data:', formData);
       
       let errorMessage = `Error saving ${dialogType}`;
-      if (error.response?.data?.message) {
+      
+      // Handle ASP.NET Core validation errors (application/problem+json)
+      if (error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const errorList = Object.keys(validationErrors).map(key => {
+          return `${key}: ${validationErrors[key].join(', ')}`;
+        }).join('; ');
+        errorMessage += `: ${errorList}`;
+      } else if (error.response?.data?.title) {
+        // ASP.NET Core problem details format
+        errorMessage += `: ${error.response.data.title}`;
+        if (error.response.data.detail) {
+          errorMessage += ` - ${error.response.data.detail}`;
+        }
+      } else if (error.response?.data?.message) {
         errorMessage += `: ${error.response.data.message}`;
       } else if (error.response?.data) {
         errorMessage += `: ${JSON.stringify(error.response.data)}`;
@@ -894,7 +920,7 @@ const ManageCourseMaterials = () => {
                       <IconButton
                         edge="end"
                         aria-label="delete"
-                        onClick={() => handleDelete(material.type, material.id)}
+                        onClick={() => handleDelete(material, material.type)}
                         color="error"
                       >
                         <Delete />
@@ -1180,10 +1206,10 @@ const ManageCourseMaterials = () => {
                       <IconButton onClick={() => handleView(quiz, 'quiz')}>
                         <Visibility />
                       </IconButton>
-                      <IconButton onClick={() => handleEdit('quiz', quiz)}>
+                      <IconButton onClick={() => handleEdit(quiz, 'quiz')}>
                         <Edit />
                       </IconButton>
-                      <IconButton onClick={() => handleDelete('quiz', quiz.id)}>
+                      <IconButton onClick={() => handleDelete(quiz, 'multiplechoice')}>
                         <Delete />
                       </IconButton>
                     </ListItemSecondaryAction>

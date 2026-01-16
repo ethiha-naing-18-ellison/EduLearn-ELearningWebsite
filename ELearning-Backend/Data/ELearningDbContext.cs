@@ -20,6 +20,7 @@ namespace ELearning.API.Data
         public DbSet<Document> Documents { get; set; }
         public DbSet<MultipleChoice> MultipleChoices { get; set; }
         public DbSet<MultipleChoiceQuestion> MultipleChoiceQuestions { get; set; }
+        public DbSet<MultipleChoiceAttempt> MultipleChoiceAttempts { get; set; }
         public DbSet<Progress> Progress { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
 
@@ -190,6 +191,26 @@ namespace ELearning.API.Data
                       .WithMany(mc => mc.Questions)
                       .HasForeignKey(e => e.MultipleChoiceId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // MultipleChoiceAttempt configuration
+            modelBuilder.Entity<MultipleChoiceAttempt>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Score).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.TotalPoints).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.Percentage).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.Answers).IsRequired();
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.MultipleChoice)
+                      .WithMany()
+                      .HasForeignKey(e => e.MultipleChoiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                // Ensure one attempt record per user per quiz
+                entity.HasIndex(e => new { e.UserId, e.MultipleChoiceId }).IsUnique();
             });
 
             // Progress configuration

@@ -3,6 +3,7 @@ using ELearning.API.Data;
 using ELearning.API.DTOs;
 using ELearning.API.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace ELearning.API.Services
 {
@@ -190,19 +191,186 @@ namespace ELearning.API.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var multipleChoice = await _context.MultipleChoices.FindAsync(id);
-            if (multipleChoice == null)
-                return false;
+            try
+            {
+                var multipleChoice = await _context.MultipleChoices
+                    .Include(mc => mc.Questions)
+                    .FirstOrDefaultAsync(mc => mc.Id == id);
+                
+                if (multipleChoice == null)
+                    return false;
 
-            _context.MultipleChoices.Remove(multipleChoice);
-            await _context.SaveChangesAsync();
+                // Remove related questions first (though cascade should handle this)
+                if (multipleChoice.Questions.Any())
+                {
+                    _context.MultipleChoiceQuestions.RemoveRange(multipleChoice.Questions);
+                }
 
-            return true;
+                _context.MultipleChoices.Remove(multipleChoice);
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting MultipleChoice {id}: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new Exception($"Failed to delete quiz: {ex.Message}", ex);
+            }
         }
 
         public async Task<bool> ExistsAsync(int id)
         {
             return await _context.MultipleChoices.AnyAsync(mc => mc.Id == id);
+        }
+
+        public async Task<QuizSubmissionResultDto> SubmitQuizAsync(int quizId, int userId, SubmitQuizDto submitDto)
+        {
+            // Get the quiz with questions
+            var quiz = await _context.MultipleChoices
+                .Include(mc => mc.Questions)
+                .FirstOrDefaultAsync(mc => mc.Id == quizId);
+
+            if (quiz == null)
+            {
+                throw new KeyNotFoundException("Quiz not found");
+            }
+
+            // Check if attempt already exists (for update/upsert pattern)
+            var existingAttempt = await _context.MultipleChoiceAttempts
+                .FirstOrDefaultAsync(a => a.UserId == userId && a.MultipleChoiceId == quizId);
+
+            // Check max attempts
+            int currentSubmissionCount = existingAttempt?.SubmissionCount ?? 0;
+            if (currentSubmissionCount >= quiz.MaxAttempts)
+            {
+                throw new InvalidOperationException($"Maximum attempts ({quiz.MaxAttempts}) reached for this quiz. You cannot submit again.");
+            }
+
+            // Calculate score
+            decimal score = 0;
+            decimal totalPoints = quiz.Questions.Sum(q => q.Points);
+            var questionResults = new Dictionary<int, QuestionResultDto>();
+
+            foreach (var question in quiz.Questions)
+            {
+                var selectedAnswer = submitDto.Answers.ContainsKey(question.Id) 
+                    ? submitDto.Answers[question.Id] 
+                    : null;
+
+                var isCorrect = !string.IsNullOrEmpty(selectedAnswer) && 
+                               selectedAnswer.Equals(question.CorrectAnswer, StringComparison.OrdinalIgnoreCase);
+
+                if (isCorrect)
+                {
+                    score += question.Points;
+                }
+
+                questionResults[question.Id] = new QuestionResultDto
+                {
+                    IsCorrect = isCorrect,
+                    SelectedAnswer = selectedAnswer,
+                    CorrectAnswer = question.CorrectAnswer ?? string.Empty,
+                    PointsEarned = isCorrect ? question.Points : 0,
+                    PointsAvailable = question.Points
+                };
+            }
+
+            decimal percentage = totalPoints > 0 ? Math.Round((score / totalPoints) * 100, 2) : 0;
+            bool isPassed = percentage >= quiz.PassingScore;
+
+            // Serialize answers to JSON
+            var answersJson = JsonSerializer.Serialize(submitDto.Answers);
+
+            MultipleChoiceAttempt attempt;
+            
+            if (existingAttempt != null)
+            {
+                // Update existing attempt (retake scenario) - final mark is always the latest
+                existingAttempt.Score = score;
+                existingAttempt.TotalPoints = totalPoints;
+                existingAttempt.Percentage = percentage;
+                existingAttempt.IsPassed = isPassed;
+                existingAttempt.Answers = answersJson;
+                existingAttempt.StartedAt = DateTime.UtcNow.AddSeconds(-(submitDto.TimeSpent ?? 0));
+                existingAttempt.CompletedAt = DateTime.UtcNow;
+                existingAttempt.TimeSpent = submitDto.TimeSpent ?? 0;
+                existingAttempt.SubmissionCount += 1; // Increment submission count
+                existingAttempt.UpdatedAt = DateTime.UtcNow;
+                attempt = existingAttempt;
+            }
+            else
+            {
+                // Create new attempt record (first submission)
+                attempt = new MultipleChoiceAttempt
+                {
+                    UserId = userId,
+                    MultipleChoiceId = quizId,
+                    Score = score,
+                    TotalPoints = totalPoints,
+                    Percentage = percentage,
+                    IsPassed = isPassed,
+                    Answers = answersJson,
+                    SubmissionCount = 1,
+                    StartedAt = DateTime.UtcNow.AddSeconds(-(submitDto.TimeSpent ?? 0)),
+                    CompletedAt = DateTime.UtcNow,
+                    TimeSpent = submitDto.TimeSpent ?? 0,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.MultipleChoiceAttempts.Add(attempt);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Check if user can retake
+            var newSubmissionCount = attempt.SubmissionCount;
+            bool canRetake = newSubmissionCount < quiz.MaxAttempts && quiz.AllowRetake;
+
+            return new QuizSubmissionResultDto
+            {
+                AttemptId = attempt.Id,
+                Score = score,
+                TotalPoints = totalPoints,
+                Percentage = percentage,
+                IsPassed = isPassed,
+                AttemptNumber = newSubmissionCount,
+                MaxAttempts = quiz.MaxAttempts,
+                CanRetake = canRetake,
+                QuestionResults = questionResults
+            };
+        }
+
+        public async Task<int> GetUserAttemptCountAsync(int quizId, int userId)
+        {
+            // Get submission count from the attempt record
+            var attempt = await _context.MultipleChoiceAttempts
+                .FirstOrDefaultAsync(a => a.MultipleChoiceId == quizId && a.UserId == userId);
+            
+            return attempt?.SubmissionCount ?? 0;
+        }
+
+        public async Task<IEnumerable<MultipleChoiceAttemptDto>> GetUserAttemptsAsync(int quizId, int userId)
+        {
+            var attempts = await _context.MultipleChoiceAttempts
+                .Where(a => a.MultipleChoiceId == quizId && a.UserId == userId)
+                .OrderByDescending(a => a.CompletedAt)
+                .ToListAsync();
+
+            return _mapper.Map<IEnumerable<MultipleChoiceAttemptDto>>(attempts);
+        }
+
+        public async Task<bool> CanUserRetakeQuizAsync(int quizId, int userId)
+        {
+            var quiz = await _context.MultipleChoices.FindAsync(quizId);
+            if (quiz == null)
+                return false;
+
+            if (!quiz.AllowRetake)
+                return false;
+
+            var submissionCount = await GetUserAttemptCountAsync(quizId, userId);
+            return submissionCount < quiz.MaxAttempts;
         }
     }
 }

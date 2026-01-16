@@ -23,7 +23,8 @@ import {
   TrendingUp,
   BookOnline,
   Star,
-  Schedule
+  Schedule,
+  PlayArrow
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -36,41 +37,99 @@ const Dashboard = () => {
     totalCourses: 0,
     enrolledCourses: 0,
     completedCourses: 0,
-    totalStudents: 0
+    inProgressCourses: 0,
+    totalStudents: 0,
+    averageProgress: 0
   });
   const [recentCourses, setRecentCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (user) {
+      fetchDashboardData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role]);
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch user's courses and stats
-      const coursesResponse = await axios.get('http://localhost:5000/api/courses');
-      const enrollmentsResponse = await axios.get('http://localhost:5000/api/enrollments');
+      setLoading(true);
       
-      // For instructors, show only their own courses
-      if (user.role === 'Instructor' || user.role === 'Admin') {
-        setRecentCourses(coursesResponse.data.filter(course => course.instructorId === user.id).slice(0, 3));
-      } else {
-        setRecentCourses(coursesResponse.data.slice(0, 3));
-      }
-      
-      if (user.role === 'Instructor' || user.role === 'Admin') {
+      if (user.role === 'Student') {
+        // For students, fetch only their enrolled courses
+        const enrollmentsResponse = await axios.get('http://localhost:5000/api/enrollments', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        const enrollments = enrollmentsResponse.data || [];
+        
+        // Extract courses from enrollments
+        const enrolledCourses = enrollments
+          .map(e => e.course)
+          .filter(course => course !== null && course !== undefined);
+        
+        // Sort by most recently enrolled
+        const sortedCourses = enrolledCourses
+          .sort((a, b) => {
+            const enrollmentA = enrollments.find(e => e.courseId === a.id);
+            const enrollmentB = enrollments.find(e => e.courseId === b.id);
+            return new Date(enrollmentB?.enrolledAt || 0) - new Date(enrollmentA?.enrolledAt || 0);
+          })
+          .slice(0, 3);
+        
+        setRecentCourses(sortedCourses);
+        
+        // Calculate student-specific stats
+        const completedCount = enrollments.filter(e => e.status === 'Completed').length;
+        const inProgressCount = enrollments.filter(e => e.status === 'InProgress').length;
+        
+        // Calculate average progress (if available from progress data, otherwise use enrollment status)
+        let avgProgress = 0;
+        if (enrollments.length > 0) {
+          // If we have progress data, use it; otherwise estimate based on status
+          const completedEnrollments = enrollments.filter(e => e.status === 'Completed').length;
+          avgProgress = (completedEnrollments / enrollments.length) * 100;
+        }
+        
         setStats({
-          totalCourses: coursesResponse.data.filter(course => course.instructorId === user.id).length,
-          enrolledCourses: 0,
-          completedCourses: 0,
-          totalStudents: enrollmentsResponse.data.length
+          enrolledCourses: enrollments.length,
+          completedCourses: completedCount,
+          inProgressCourses: inProgressCount,
+          averageProgress: Math.round(avgProgress)
         });
       } else {
+        // For instructors/admins, fetch their created courses
+        const coursesResponse = await axios.get('http://localhost:5000/api/courses');
+        
+        const allCourses = coursesResponse.data || [];
+        const instructorCourses = allCourses.filter(course => course.instructorId === user.id);
+        
+        setRecentCourses(instructorCourses.slice(0, 3));
+        
+        // Try to fetch enrollments to count students (this might not be available for all instructors)
+        let totalStudentsCount = 0;
+        try {
+          const enrollmentsResponse = await axios.get('http://localhost:5000/api/enrollments', {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          
+          const allEnrollments = enrollmentsResponse.data || [];
+          const instructorCourseIds = instructorCourses.map(c => c.id);
+          totalStudentsCount = allEnrollments.filter(e => 
+            instructorCourseIds.includes(e.courseId)
+          ).length;
+        } catch (error) {
+          console.warn('Could not fetch enrollment data for instructor:', error);
+          // If we can't fetch enrollments, we'll show 0 - this is acceptable
+        }
+        
         setStats({
-          totalCourses: coursesResponse.data.length,
-          enrolledCourses: enrollmentsResponse.data.length,
-          completedCourses: enrollmentsResponse.data.filter(e => e.status === 'Completed').length,
-          totalStudents: 0
+          totalCourses: instructorCourses.length,
+          totalStudents: totalStudentsCount
         });
       }
     } catch (error) {
@@ -115,74 +174,150 @@ const Dashboard = () => {
       </Box>
 
       <Grid container spacing={3}>
-        {/* Stats Cards */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <School color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Courses</Typography>
-              </Box>
-              <Typography variant="h4" color="primary">
-                {user.role === 'Student' ? stats.enrolledCourses : stats.totalCourses}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {user.role === 'Student' ? 'Enrolled' : 'Created'}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        {/* Stats Cards - Different for Students vs Instructors */}
+        {user.role === 'Student' ? (
+          <>
+            {/* Student Dashboard Stats */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <School color="primary" sx={{ mr: 1 }} />
+                    <Typography variant="h6">Courses</Typography>
+                  </Box>
+                  <Typography variant="h4" color="primary">
+                    {stats.enrolledCourses}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Enrolled
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <People color="secondary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Students</Typography>
-              </Box>
-              <Typography variant="h4" color="secondary">
-                {stats.totalStudents}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total Students
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <PlayArrow color="info" sx={{ mr: 1 }} />
+                    <Typography variant="h6">In Progress</Typography>
+                  </Box>
+                  <Typography variant="h4" color="info.main">
+                    {stats.inProgressCourses}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Active Courses
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Assignment color="success" sx={{ mr: 1 }} />
-                <Typography variant="h6">Completed</Typography>
-              </Box>
-              <Typography variant="h4" color="success.main">
-                {stats.completedCourses}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Courses Completed
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Assignment color="success" sx={{ mr: 1 }} />
+                    <Typography variant="h6">Completed</Typography>
+                  </Box>
+                  <Typography variant="h4" color="success.main">
+                    {stats.completedCourses}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Courses Completed
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TrendingUp color="warning" sx={{ mr: 1 }} />
-                <Typography variant="h6">Progress</Typography>
-              </Box>
-              <Typography variant="h4" color="warning.main">
-                85%
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Average Progress
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <TrendingUp color="warning" sx={{ mr: 1 }} />
+                    <Typography variant="h6">Progress</Typography>
+                  </Box>
+                  <Typography variant="h4" color="warning.main">
+                    {stats.averageProgress}%
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Average Progress
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </>
+        ) : (
+          <>
+            {/* Instructor/Admin Dashboard Stats */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <School color="primary" sx={{ mr: 1 }} />
+                    <Typography variant="h6">Courses</Typography>
+                  </Box>
+                  <Typography variant="h4" color="primary">
+                    {stats.totalCourses}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Created
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <People color="secondary" sx={{ mr: 1 }} />
+                    <Typography variant="h6">Students</Typography>
+                  </Box>
+                  <Typography variant="h4" color="secondary">
+                    {stats.totalStudents}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Students
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <TrendingUp color="warning" sx={{ mr: 1 }} />
+                    <Typography variant="h6">Engagement</Typography>
+                  </Box>
+                  <Typography variant="h4" color="warning.main">
+                    {stats.totalCourses > 0 ? Math.round((stats.totalStudents / stats.totalCourses) * 10) / 10 : 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Avg. Students/Course
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Assignment color="success" sx={{ mr: 1 }} />
+                    <Typography variant="h6">Activities</Typography>
+                  </Box>
+                  <Typography variant="h4" color="success.main">
+                    -
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Activities
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </>
+        )}
 
         {/* Recent Courses */}
         <Grid item xs={12} md={8}>
@@ -191,61 +326,77 @@ const Dashboard = () => {
               <Typography variant="h6" gutterBottom>
                 {user.role === 'Student' ? 'Your Recent Courses' : 'Your Created Courses'}
               </Typography>
-              <List>
-                {recentCourses.map((course, index) => (
-                  <React.Fragment key={course.id}>
-                    <ListItem>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          <BookOnline />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={course.title}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {course.instructor?.firstName} {course.instructor?.lastName}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                              <Star sx={{ fontSize: 16, color: 'orange', mr: 0.5 }} />
-                              <Typography variant="body2" sx={{ mr: 2 }}>
-                                4.8
+              {loading ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+                  Loading courses...
+                </Typography>
+              ) : recentCourses.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+                  {user.role === 'Student' 
+                    ? "You haven't enrolled in any courses yet. Browse courses to get started!" 
+                    : "You haven't created any courses yet."}
+                </Typography>
+              ) : (
+                <List>
+                  {recentCourses.map((course, index) => (
+                    <React.Fragment key={course.id || index}>
+                      <ListItem>
+                        <ListItemAvatar>
+                          <Avatar sx={{ bgcolor: 'primary.main' }}>
+                            <BookOnline />
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={course.title}
+                          secondary={
+                            <Box>
+                              <Typography variant="body2" color="text.secondary">
+                                {course.instructor?.firstName && course.instructor?.lastName
+                                  ? `${course.instructor.firstName} ${course.instructor.lastName}`
+                                  : course.instructorName || 'Instructor'}
                               </Typography>
-                              <Chip 
-                                label={course.level} 
-                                size="small" 
-                                color="primary" 
-                                variant="outlined"
-                              />
+                              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                                <Star sx={{ fontSize: 16, color: 'orange', mr: 0.5 }} />
+                                <Typography variant="body2" sx={{ mr: 2 }}>
+                                  4.8
+                                </Typography>
+                                {course.level && (
+                                  <Chip 
+                                    label={course.level} 
+                                    size="small" 
+                                    color="primary" 
+                                    variant="outlined"
+                                  />
+                                )}
+                              </Box>
                             </Box>
-                          </Box>
-                        }
-                      />
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                        <Typography variant="h6" color="primary">
-                          ${course.price}
-                        </Typography>
-                        <Button 
-                          size="small" 
-                          variant="outlined"
-                          onClick={() => navigate(`/courses/${course.id}`)}
-                        >
-                          View
-                        </Button>
-                      </Box>
-                    </ListItem>
-                    {index < recentCourses.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
+                          }
+                        />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Typography variant="h6" color="primary">
+                            ${course.price || 0}
+                          </Typography>
+                          <Button 
+                            size="small" 
+                            variant="outlined"
+                            onClick={() => navigate(`/courses/${course.id}`)}
+                          >
+                            View
+                          </Button>
+                        </Box>
+                      </ListItem>
+                      {index < recentCourses.length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
             </CardContent>
             <CardActions>
               <Button 
                 fullWidth
                 onClick={() => navigate('/my-courses')}
               >
-                View My Courses
+                {user.role === 'Student' ? 'View My Courses' : 'Manage My Courses'}
               </Button>
             </CardActions>
           </Card>
