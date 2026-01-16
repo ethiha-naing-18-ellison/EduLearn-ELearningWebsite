@@ -36,6 +36,16 @@ namespace ELearning.API.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         
         public DateTime? PublishedAt { get; set; }
+        
+        public string? CertificateInstructorName { get; set; }
+        
+        public string? CertificateSignature { get; set; }
+        
+        public string? CertificateInstructorName1 { get; set; }
+        
+        public string? CertificateInstructorName2 { get; set; }
+        
+        public string? CertificateInstructorName3 { get; set; }
 
         // Navigation properties
         public virtual User Instructor { get; set; } = null!;

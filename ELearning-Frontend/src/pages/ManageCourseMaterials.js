@@ -47,7 +47,8 @@ import {
   CloudUpload,
   MenuBook,
   Quiz,
-  DragIndicator
+  DragIndicator,
+  WorkspacePremium
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -79,6 +80,13 @@ const ManageCourseMaterials = () => {
   const [viewingType, setViewingType] = useState('');
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [certificateInstructorName, setCertificateInstructorName] = useState('');
+  const [certificateInstructorName1, setCertificateInstructorName1] = useState('');
+  const [certificateInstructorName2, setCertificateInstructorName2] = useState('');
+  const [certificateInstructorName3, setCertificateInstructorName3] = useState('');
+  const [certificateSignature, setCertificateSignature] = useState(null);
+  const [certificateSignaturePreview, setCertificateSignaturePreview] = useState('');
+  const [savingCertificate, setSavingCertificate] = useState(false);
 
   useEffect(() => {
     fetchCourseData();
@@ -102,11 +110,106 @@ const ManageCourseMaterials = () => {
       setVideos(videosRes.data);
       setDocuments(documentsRes.data);
       setQuizzes(quizzesRes.data);
+      
+      // Load certificate settings
+      if (courseRes.data) {
+        setCertificateInstructorName(courseRes.data.certificateInstructorName || courseRes.data.instructor?.name || courseRes.data.instructor?.username || '');
+        setCertificateInstructorName1(courseRes.data.certificateInstructorName1 || 'Thiha Naing');
+        setCertificateInstructorName2(courseRes.data.certificateInstructorName2 || 'Nay Myo Khine');
+        setCertificateInstructorName3(courseRes.data.certificateInstructorName3 || 'Min Thiha');
+        if (courseRes.data.certificateSignature) {
+          const signatureUrl = courseRes.data.certificateSignature.startsWith('http') 
+            ? courseRes.data.certificateSignature 
+            : `http://localhost:5000${courseRes.data.certificateSignature}`;
+          setCertificateSignaturePreview(signatureUrl);
+        } else {
+          setCertificateSignaturePreview('');
+        }
+      }
     } catch (error) {
       console.error('Error fetching course data:', error);
       setMessage('Error loading course materials');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleSaveCertificateSettings = async () => {
+    try {
+      setSavingCertificate(true);
+      setMessage('');
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('certificateInstructorName', certificateInstructorName);
+      if (certificateSignature) {
+        formDataToSend.append('certificateSignature', certificateSignature);
+      }
+
+      await axios.put(
+        `http://localhost:5000/api/courses/${id}/certificate-settings`,
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      setMessage('Certificate settings saved successfully');
+      
+      // Refresh course data
+      const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`);
+      setCourse(courseRes.data);
+      if (courseRes.data.certificateSignature) {
+        const signatureUrl = courseRes.data.certificateSignature.startsWith('http') 
+          ? courseRes.data.certificateSignature 
+          : `http://localhost:5000${courseRes.data.certificateSignature}`;
+        setCertificateSignaturePreview(signatureUrl);
+      }
+    } catch (error) {
+      console.error('Error saving certificate settings:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error saving certificate settings';
+      setMessage(errorMessage);
+    } finally {
+      setSavingCertificate(false);
+    }
+  };
+
+  const handleSaveCertificateInstructors = async () => {
+    try {
+      setSavingCertificate(true);
+      setMessage('');
+
+      await axios.put(
+        `http://localhost:5000/api/courses/${id}/certificate-instructors`,
+        {
+          certificateInstructorName1: certificateInstructorName1,
+          certificateInstructorName2: certificateInstructorName2,
+          certificateInstructorName3: certificateInstructorName3
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      setMessage('Certificate instructor names saved successfully');
+      
+      // Refresh course data
+      const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`);
+      setCourse(courseRes.data);
+      setCertificateInstructorName1(courseRes.data.certificateInstructorName1 || 'Thiha Naing');
+      setCertificateInstructorName2(courseRes.data.certificateInstructorName2 || 'Nay Myo Khine');
+      setCertificateInstructorName3(courseRes.data.certificateInstructorName3 || 'Min Thiha');
+    } catch (error) {
+      console.error('Error saving certificate instructors:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error saving certificate instructors';
+      setMessage(errorMessage);
+    } finally {
+      setSavingCertificate(false);
     }
   };
 
@@ -125,7 +228,9 @@ const ManageCourseMaterials = () => {
 
   // Handle editing materials from the All tab
   const handleEditFromAll = (material) => {
-    handleEdit(material.type, material);
+    // Map quiz type to the correct type for handleEdit
+    const editType = material.type === 'quiz' ? 'quiz' : material.type;
+    handleEdit(material, editType);
   };
 
   const handleAddNew = (type) => {
@@ -332,11 +437,13 @@ const ManageCourseMaterials = () => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
     
     try {
-      const endpoint = type === 'lesson' ? 'lessons' : 
-                     type === 'assignment' ? 'assignments' : 
-                     type === 'video' ? 'videos' : 
-                     type === 'document' ? 'documents' :
-                     type === 'multiplechoice' ? 'multiplechoices' : 'documents';
+      // Map quiz type to multiplechoice for API endpoint
+      const apiType = type === 'quiz' ? 'multiplechoice' : type;
+      const endpoint = apiType === 'lesson' ? 'lessons' : 
+                     apiType === 'assignment' ? 'assignments' : 
+                     apiType === 'video' ? 'videos' : 
+                     apiType === 'document' ? 'documents' :
+                     apiType === 'multiplechoice' ? 'multiplechoices' : 'documents';
       await axios.delete(`http://localhost:5000/api/${endpoint}/${item.id}`);
       setMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
       fetchCourseData();
@@ -950,6 +1057,11 @@ const ManageCourseMaterials = () => {
               icon={<Quiz />} 
               iconPosition="start"
             />
+            <Tab 
+              label="Certification" 
+              icon={<WorkspacePremium />} 
+              iconPosition="start"
+            />
           </Tabs>
         </Box>
 
@@ -1364,6 +1476,69 @@ const ManageCourseMaterials = () => {
                   </Typography>
                 )}
               </List>
+            </Box>
+          )}
+
+          {/* Certification Tab */}
+          {tabValue === 6 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Certificate Settings</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Configure the certificate settings for this course. Three instructor names will appear on certificates issued to students. All instructors will use the same signature image.
+              </Typography>
+
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+                    Instructor Names for Certificate
+                  </Typography>
+                  
+                  <TextField
+                    fullWidth
+                    label="Instructor 1 Name"
+                    value={certificateInstructorName1}
+                    onChange={(e) => setCertificateInstructorName1(e.target.value)}
+                    placeholder="Thiha Naing"
+                    sx={{ mb: 2 }}
+                    helperText="First instructor name that will appear on the certificate"
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="Instructor 2 Name"
+                    value={certificateInstructorName2}
+                    onChange={(e) => setCertificateInstructorName2(e.target.value)}
+                    placeholder="Nay Myo Khine"
+                    sx={{ mb: 2 }}
+                    helperText="Second instructor name that will appear on the certificate"
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="Instructor 3 Name"
+                    value={certificateInstructorName3}
+                    onChange={(e) => setCertificateInstructorName3(e.target.value)}
+                    placeholder="Min Thiha"
+                    sx={{ mb: 3 }}
+                    helperText="Third instructor name that will appear on the certificate"
+                  />
+
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Note: All instructors will use the same signature image (Thiha_Sign.png) which is automatically included on the certificate.
+                  </Typography>
+
+                  <Button
+                    variant="contained"
+                    onClick={handleSaveCertificateInstructors}
+                    disabled={savingCertificate}
+                    startIcon={savingCertificate ? <CircularProgress size={20} /> : null}
+                  >
+                    {savingCertificate ? 'Saving...' : 'Save Certificate Instructor Names'}
+                  </Button>
+                </CardContent>
+              </Card>
             </Box>
           )}
         </CardContent>

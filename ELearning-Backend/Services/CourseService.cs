@@ -230,5 +230,78 @@ namespace ELearning.API.Services
 
             return _mapper.Map<IEnumerable<CourseDto>>(courses);
         }
+
+        public async Task<CourseDto> UpdateCertificateSettingsAsync(int id, string? certificateInstructorName, string? certificateSignature, int userId)
+        {
+            var course = await _context.Courses
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (course == null)
+            {
+                throw new KeyNotFoundException("Course not found");
+            }
+
+            // Check if user is instructor or admin
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException("User not found");
+            }
+
+            if (course.InstructorId != userId && user.Role != UserRole.Admin)
+            {
+                throw new UnauthorizedAccessException("You can only update certificate settings for your own courses");
+            }
+
+            if (!string.IsNullOrEmpty(certificateInstructorName))
+                course.CertificateInstructorName = certificateInstructorName;
+
+            if (!string.IsNullOrEmpty(certificateSignature))
+                course.CertificateSignature = certificateSignature;
+
+            course.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return await GetCourseByIdAsync(course.Id);
+        }
+
+        public async Task<CourseDto> UpdateCertificateInstructorsAsync(int id, string? certificateInstructorName1, string? certificateInstructorName2, string? certificateInstructorName3, int userId)
+        {
+            var course = await _context.Courses
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (course == null)
+            {
+                throw new KeyNotFoundException("Course not found");
+            }
+
+            // Check if user is instructor or admin
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException("User not found");
+            }
+
+            if (course.InstructorId != userId && user.Role != UserRole.Admin)
+            {
+                throw new UnauthorizedAccessException("You can only update certificate settings for your own courses");
+            }
+
+            if (!string.IsNullOrEmpty(certificateInstructorName1))
+                course.CertificateInstructorName1 = certificateInstructorName1;
+
+            if (!string.IsNullOrEmpty(certificateInstructorName2))
+                course.CertificateInstructorName2 = certificateInstructorName2;
+
+            if (!string.IsNullOrEmpty(certificateInstructorName3))
+                course.CertificateInstructorName3 = certificateInstructorName3;
+
+            course.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return await GetCourseByIdAsync(course.Id);
+        }
     }
 }

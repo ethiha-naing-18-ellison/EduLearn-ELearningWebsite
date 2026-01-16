@@ -20,6 +20,11 @@ namespace ELearning.API.DTOs
         public DateTime? PublishedAt { get; set; }
         public int EnrollmentsCount { get; set; }
         public double Rating { get; set; }
+        public string? CertificateInstructorName { get; set; }
+        public string? CertificateSignature { get; set; }
+        public string? CertificateInstructorName1 { get; set; }
+        public string? CertificateInstructorName2 { get; set; }
+        public string? CertificateInstructorName3 { get; set; }
     }
 
     public class CreateCourseDto

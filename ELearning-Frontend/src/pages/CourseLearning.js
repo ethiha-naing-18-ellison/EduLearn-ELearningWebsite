@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -30,7 +30,10 @@ import {
   DialogContent,
   DialogActions,
   Backdrop,
-  Fade
+  Fade,
+  TextField,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import {
   PlayCircle,
@@ -50,11 +53,15 @@ import {
   VolumeUp,
   VolumeOff,
   Quiz,
-  TaskAlt
+  TaskAlt,
+  WorkspacePremium,
+  Cancel
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const CourseLearning = () => {
   const { id } = useParams();
@@ -81,11 +88,18 @@ const CourseLearning = () => {
   // Quiz answer state - stores answers for each quiz: { quizId: { questionId: selectedAnswer } }
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState({}); // Track which quizzes have been submitted
-  const [quizResults, setQuizResults] = useState({}); // Store quiz results after submission
+  const [quizResults, setQuizResults] = useState({}); // Store quiz results after submission: { quizId: { score, totalPoints, percentage, isPassed, results } }
   const [quizAttempts, setQuizAttempts] = useState({}); // Store attempt counts for each quiz
   const [quizCanRetake, setQuizCanRetake] = useState({}); // Store if user can retake each quiz
   const [quizStartTime, setQuizStartTime] = useState({}); // Track when quiz was started
+  const [quizPassStatus, setQuizPassStatus] = useState({}); // Store quiz pass status: { quizId: true/false }
   const [materialCompletions, setMaterialCompletions] = useState({}); // Track completion status: { "video_1": true, "document_2": true, etc. }
+  const [certificateName, setCertificateName] = useState(''); // Name entered for certificate
+  const [confirmCertificateName, setConfirmCertificateName] = useState(''); // Confirmation name
+  const [certificateNameError, setCertificateNameError] = useState(''); // Error message for name mismatch
+  const [nameConfirmed, setNameConfirmed] = useState(false); // Track if name has been confirmed
+  const [confirmedName, setConfirmedName] = useState(''); // Store the confirmed name
+  const [nameConfirmationChecked, setNameConfirmationChecked] = useState(false); // Checkbox state
 
   const fetchMaterialCompletions = useCallback(async () => {
     if (!user || !id) {
@@ -125,7 +139,151 @@ const CourseLearning = () => {
   useEffect(() => {
     fetchCourseData();
     checkEnrollment();
+    
+    // Load confirmed certificate name from localStorage
+    if (user && id) {
+      const storedConfirmedName = localStorage.getItem(`certificate_name_${id}_${user.id}`);
+      if (storedConfirmedName) {
+        setConfirmedName(storedConfirmedName);
+        setNameConfirmed(true);
+      }
+    }
   }, [id, user]);
+  
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      const certificateElement = document.getElementById('certificate-card');
+      if (!certificateElement) {
+        alert('Certificate not found. Please refresh the page.');
+        return;
+      }
+
+      // Show loading state
+      const loadingAlert = document.createElement('div');
+      loadingAlert.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #1976d2; color: white; padding: 15px 20px; border-radius: 4px; z-index: 10000;';
+      loadingAlert.textContent = 'Generating PDF...';
+      document.body.appendChild(loadingAlert);
+
+      // Preload all images in the certificate element
+      const images = certificateElement.getElementsByTagName('img');
+      const imagePromises = [];
+      
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (!img.complete) {
+          const promise = new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            // Set timeout to prevent hanging
+            setTimeout(() => resolve(), 5000);
+          });
+          imagePromises.push(promise);
+        }
+      }
+
+      // Wait for all images to load
+      if (imagePromises.length > 0) {
+        await Promise.all(imagePromises);
+        // Give a small delay to ensure images are rendered
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Create canvas from certificate element
+      const canvas = await html2canvas(certificateElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: certificateElement.offsetWidth,
+        height: certificateElement.offsetHeight,
+        imageTimeout: 15000,
+        onclone: (clonedDoc) => {
+          // Ensure images are visible in cloned document
+          const clonedImages = clonedDoc.getElementsByTagName('img');
+          for (let i = 0; i < clonedImages.length; i++) {
+            const img = clonedImages[i];
+            if (img.src && !img.complete) {
+              img.style.display = 'block';
+              img.style.visibility = 'visible';
+            }
+          }
+        }
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      // A4 dimensions in mm
+      const pdfWidth = 210; // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
+      
+      // Create PDF with A4 format
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      // Calculate scaling to fit A4 while maintaining aspect ratio
+      const imgAspectRatio = canvas.width / canvas.height;
+      const pdfAspectRatio = pdfWidth / pdfHeight;
+      
+      let finalWidth = pdfWidth;
+      let finalHeight = pdfHeight;
+      let xOffset = 0;
+      let yOffset = 0;
+      
+      if (imgAspectRatio > pdfAspectRatio) {
+        // Image is wider, fit to width
+        finalHeight = pdfWidth / imgAspectRatio;
+        yOffset = (pdfHeight - finalHeight) / 2;
+      } else {
+        // Image is taller, fit to height
+        finalWidth = pdfHeight * imgAspectRatio;
+        xOffset = (pdfWidth - finalWidth) / 2;
+      }
+      
+      // Add image to PDF centered
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
+      
+      // Generate filename
+      const courseTitle = course?.title?.replace(/[^a-z0-9]/gi, '_') || 'Certificate';
+      const studentName = (confirmedName || user?.name || user?.username || 'Student').replace(/[^a-z0-9]/gi, '_');
+      const filename = `Certificate_${courseTitle}_${studentName}.pdf`;
+      
+      // Save PDF
+      pdf.save(filename);
+      
+      // Remove loading alert
+      document.body.removeChild(loadingAlert);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+  
+  // Handle certificate name confirmation
+  const handleConfirmCertificateName = () => {
+    if (!certificateName || !confirmCertificateName) {
+      setCertificateNameError('Please enter and confirm your name.');
+      return;
+    }
+    
+    if (certificateName !== confirmCertificateName) {
+      setCertificateNameError('Names do not match. Please ensure both fields contain the same name.');
+      return;
+    }
+    
+    if (!nameConfirmationChecked) {
+      setCertificateNameError('Please check the confirmation checkbox.');
+      return;
+    }
+    
+    // Save confirmed name to localStorage
+    if (user && id) {
+      localStorage.setItem(`certificate_name_${id}_${user.id}`, certificateName);
+      setConfirmedName(certificateName);
+      setNameConfirmed(true);
+      setCertificateNameError('');
+    }
+  };
 
   // Fetch material completions after course data is loaded and user is available
   useEffect(() => {
@@ -186,6 +344,58 @@ const CourseLearning = () => {
     }
   };
 
+  // Fetch quiz pass status for all quizzes
+  const fetchQuizPassStatus = async (quizIds) => {
+    if (!user || !quizIds || quizIds.length === 0) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const passStatusPromises = quizIds.map(async (quizId) => {
+        try {
+          const response = await axios.get(
+            `http://localhost:5000/api/multiplechoices/${quizId}/attempts/all`,
+            {
+              headers: { Authorization: `Bearer ${token}` }
+            }
+          );
+          const attempts = response.data || [];
+          // Get the latest attempt (first one as API returns ordered by CompletedAt desc)
+          const latestAttempt = attempts.length > 0 ? attempts[0] : null;
+          return {
+            quizId,
+            isPassed: latestAttempt?.isPassed || false,
+            percentage: latestAttempt?.percentage || 0
+          };
+        } catch (error) {
+          console.error(`Error fetching attempts for quiz ${quizId}:`, error);
+          return { quizId, isPassed: false, percentage: 0 };
+        }
+      });
+      
+      const results = await Promise.all(passStatusPromises);
+      const passStatusMap = {};
+      results.forEach(result => {
+        passStatusMap[result.quizId] = result.isPassed;
+        // Also update quizResults with percentage if available
+        if (result.percentage > 0) {
+          setQuizResults(prev => ({
+            ...prev,
+            [result.quizId]: {
+              ...prev[result.quizId],
+              percentage: result.percentage,
+              isPassed: result.isPassed
+            }
+          }));
+        }
+      });
+      setQuizPassStatus(passStatusMap);
+    } catch (error) {
+      console.error('Error fetching quiz pass status:', error);
+    }
+  };
+
   const fetchCourseData = async () => {
     try {
       setLoading(true);
@@ -204,6 +414,12 @@ const CourseLearning = () => {
       setVideos(videosRes.data);
       setDocuments(documentsRes.data);
       setMultipleChoices(multipleChoicesRes.data);
+      
+      // Fetch quiz pass status after quizzes are loaded
+      if (multipleChoicesRes.data && multipleChoicesRes.data.length > 0) {
+        const quizIds = multipleChoicesRes.data.map(q => q.id);
+        await fetchQuizPassStatus(quizIds);
+      }
     } catch (error) {
       console.error('Error fetching course data:', error);
     } finally {
@@ -272,6 +488,10 @@ const CourseLearning = () => {
   };
 
   const handleTabChange = (event, newValue) => {
+    // Prevent switching to Certification tab (index 6) if not all materials are completed
+    if (newValue === 6 && !allMaterialsCompleted) {
+      return;
+    }
     setTabValue(newValue);
   };
 
@@ -471,8 +691,15 @@ const CourseLearning = () => {
           score: result.score,
           totalPoints: result.totalPoints,
           percentage: result.percentage,
+          isPassed: result.isPassed,
           results: results
         }
+      }));
+      
+      // Update quiz pass status
+      setQuizPassStatus(prev => ({
+        ...prev,
+        [quizId]: result.isPassed
       }));
 
       // Update attempt count and can retake status
@@ -492,10 +719,18 @@ const CourseLearning = () => {
         [quizId]: true
       }));
 
-      // Mark quiz as complete
-      await markMaterialComplete('multiplechoice', quizId);
+      // Mark quiz as complete only if passed
+      if (result.isPassed) {
+        await markMaterialComplete('multiplechoice', quizId);
+      } else {
+        // If failed, ensure it's not marked as complete
+        // The material completion will remain false, which is correct
+      }
 
-      alert(`Quiz submitted! Score: ${result.score}/${result.totalPoints} (${result.percentage}%)`);
+      // Refresh quiz pass status for this quiz
+      await fetchQuizPassStatus([quizId]);
+
+      alert(`Quiz submitted! Score: ${result.score}/${result.totalPoints} (${result.percentage}%)${result.isPassed ? ' - You passed! ✅' : ' - You need to score higher. Keep practicing!'}`);
     } catch (error) {
       console.error('Error submitting quiz:', error);
       const errorMessage = error.response?.data?.message || 'Error submitting quiz. Please try again.';
@@ -634,6 +869,61 @@ const CourseLearning = () => {
     ...multipleChoices.map(mc => ({ ...mc, type: 'multiplechoice', materialType: 'Quiz' }))
   ].sort((a, b) => (a.orderIndex || a.order || 0) - (b.orderIndex || b.order || 0));
 
+  // Check if all course materials are completed and all quizzes passed
+  const allMaterialsCompleted = useMemo(() => {
+    try {
+      // Create materials list for checking
+      const materials = [
+        ...sortedLessons.map(lesson => ({ ...lesson, type: 'lesson' })),
+        ...assignments.map(assignment => ({ ...assignment, type: 'assignment' })),
+        ...videos.map(video => ({ ...video, type: 'video' })),
+        ...documents.map(document => ({ ...document, type: 'document' })),
+        ...multipleChoices.map(mc => ({ ...mc, type: 'multiplechoice' }))
+      ];
+      
+      if (!materials || materials.length === 0) {
+        console.log('No materials found for completion check');
+        return false;
+      }
+      
+      const completed = materials.every(material => {
+        if (!material || !material.type || !material.id) return false;
+        
+        // For quizzes, check if passed (not just completed)
+        if (material.type === 'multiplechoice' || material.type === 'quiz') {
+          // Check if quiz has been attempted and passed
+          const isPassed = quizPassStatus[material.id];
+          if (isPassed === undefined) {
+            // If no pass status yet, check if it's at least completed
+            const key = 'multiplechoice';
+            const completionKey = `${key}_${material.id}`;
+            return materialCompletions[completionKey] === true;
+          }
+          return isPassed === true;
+        }
+        
+        // For other materials, check completion
+        const key = material.type === 'lesson' ? 'lesson' : material.type;
+        const completionKey = `${key}_${material.id}`;
+        return materialCompletions[completionKey] === true;
+      });
+      
+      console.log('All materials completed check:', {
+        totalMaterials: materials.length,
+        completed,
+        quizPassStatus,
+        completions: materialCompletions
+      });
+      
+      return completed;
+    } catch (error) {
+      console.error('Error checking material completion:', error);
+      return false;
+    }
+  }, [sortedLessons, assignments, videos, documents, multipleChoices, materialCompletions, quizPassStatus]);
+
+  const areAllMaterialsCompleted = () => allMaterialsCompleted;
+
   if (loading || enrollmentLoading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
@@ -759,10 +1049,24 @@ const CourseLearning = () => {
             }
           />
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {isMaterialComplete(material.type, material.id) ? (
-              <CheckCircle color="success" />
+            {material.type === 'multiplechoice' ? (
+              // For quizzes, check if passed
+              quizPassStatus[material.id] === true ? (
+                <CheckCircle color="success" />
+              ) : quizPassStatus[material.id] === false ? (
+                <Cancel color="error" />
+              ) : isMaterialComplete(material.type, material.id) ? (
+                <CheckCircle sx={{ color: 'grey.400' }} />
+              ) : (
+                <CheckCircle sx={{ color: 'grey.400' }} />
+              )
             ) : (
-              <CheckCircle sx={{ color: 'grey.400' }} />
+              // For other materials, use regular completion check
+              isMaterialComplete(material.type, material.id) ? (
+                <CheckCircle color="success" />
+              ) : (
+                <CheckCircle sx={{ color: 'grey.400' }} />
+              )
             )}
           </Box>
         </ListItem>
@@ -862,6 +1166,18 @@ const CourseLearning = () => {
           <Tab label="Videos" icon={<VideoLibrary />} iconPosition="start" />
           <Tab label="Documents" icon={<Description />} iconPosition="start" />
           <Tab label="Quizzes" icon={<Quiz />} iconPosition="start" />
+          <Tab 
+            label="Certification" 
+            icon={<WorkspacePremium />} 
+            iconPosition="start"
+            disabled={!allMaterialsCompleted}
+            sx={{
+              opacity: allMaterialsCompleted ? 1 : 0.6,
+              cursor: allMaterialsCompleted ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              minWidth: 'auto'
+            }}
+          />
         </Tabs>
 
         {/* Tab Content */}
@@ -936,6 +1252,753 @@ const CourseLearning = () => {
                 Test your knowledge with interactive quiz questions.
               </Typography>
               {renderMaterialList(multipleChoices.map(mc => ({ ...mc, type: 'multiplechoice' })))}
+            </Box>
+          )}
+
+          {tabValue === 6 && (
+            <Box>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <WorkspacePremium sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+                  Course Completion Certificate
+                </Typography>
+                <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
+                  {course?.title}
+                </Typography>
+                
+                {/* Name Input Form - Only show if not confirmed */}
+                {!nameConfirmed && (
+                  <Card sx={{ maxWidth: 600, mx: 'auto', p: 4, mb: 4 }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                        Enter Your Name for the Certificate
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        label="Enter your name"
+                        value={certificateName}
+                        onChange={(e) => {
+                          const nameValue = e.target.value;
+                          setCertificateName(nameValue);
+                          if (confirmCertificateName && nameValue !== confirmCertificateName) {
+                            setCertificateNameError('Names do not match. Please ensure both fields contain the same name.');
+                          } else {
+                            setCertificateNameError('');
+                          }
+                        }}
+                        sx={{ mb: 2 }}
+                        required
+                      />
+                      <TextField
+                        fullWidth
+                        label="Confirm your name"
+                        value={confirmCertificateName}
+                        onChange={(e) => {
+                          const confirmValue = e.target.value;
+                          setConfirmCertificateName(confirmValue);
+                          if (certificateName && confirmValue && certificateName !== confirmValue) {
+                            setCertificateNameError('Names do not match. Please ensure both fields contain the same name.');
+                          } else {
+                            setCertificateNameError('');
+                          }
+                        }}
+                        error={!!certificateNameError || (certificateName && confirmCertificateName && certificateName !== confirmCertificateName)}
+                        helperText={certificateNameError || (certificateName && confirmCertificateName && certificateName !== confirmCertificateName ? 'Names do not match' : 'Please confirm your name matches the above')}
+                        required
+                        sx={{ mb: 2 }}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={nameConfirmationChecked}
+                            onChange={(e) => setNameConfirmationChecked(e.target.checked)}
+                          />
+                        }
+                        label="I confirm this is my correct name for the certificate"
+                        sx={{ mb: 2 }}
+                      />
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        size="large"
+                        onClick={handleConfirmCertificateName}
+                        disabled={!certificateName || !confirmCertificateName || certificateName !== confirmCertificateName || !nameConfirmationChecked}
+                      >
+                        Confirm
+                      </Button>
+                      {certificateNameError && (
+                        <Alert severity="error" sx={{ mt: 2 }}>
+                          {certificateNameError}
+                        </Alert>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Certificate Display - A4 Format */}
+                <Card 
+                  id="certificate-card" 
+                  sx={{ 
+                    width: '210mm',
+                    minHeight: '297mm',
+                    maxWidth: '210mm',
+                    mx: 'auto', 
+                    mb: 4, 
+                    bgcolor: '#ffffff',
+                    border: '12px solid #1a237e',
+                    borderRadius: '0px',
+                    boxShadow: '0 12px 48px rgba(0,0,0,0.15)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '@media print': {
+                      width: '210mm',
+                      minHeight: '297mm',
+                      margin: 0,
+                      boxShadow: 'none',
+                      border: '12px solid #1a237e'
+                    }
+                  }}
+                >
+                  {/* Decorative Corner Elements */}
+                  {/* Top Left Corner */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '15px',
+                      left: '15px',
+                      width: '60px',
+                      height: '60px',
+                      borderTop: '4px solid #3f51b5',
+                      borderLeft: '4px solid #3f51b5',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '25px',
+                      left: '25px',
+                      width: '40px',
+                      height: '40px',
+                      borderTop: '2px solid #7986cb',
+                      borderLeft: '2px solid #7986cb',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+                  
+                  {/* Top Right Corner */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '15px',
+                      right: '15px',
+                      width: '60px',
+                      height: '60px',
+                      borderTop: '4px solid #3f51b5',
+                      borderRight: '4px solid #3f51b5',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '25px',
+                      right: '25px',
+                      width: '40px',
+                      height: '40px',
+                      borderTop: '2px solid #7986cb',
+                      borderRight: '2px solid #7986cb',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+                  
+                  {/* Bottom Left Corner */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: '15px',
+                      left: '15px',
+                      width: '60px',
+                      height: '60px',
+                      borderBottom: '4px solid #3f51b5',
+                      borderLeft: '4px solid #3f51b5',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: '25px',
+                      left: '25px',
+                      width: '40px',
+                      height: '40px',
+                      borderBottom: '2px solid #7986cb',
+                      borderLeft: '2px solid #7986cb',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+                  
+                  {/* Bottom Right Corner */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: '15px',
+                      right: '15px',
+                      width: '60px',
+                      height: '60px',
+                      borderBottom: '4px solid #3f51b5',
+                      borderRight: '4px solid #3f51b5',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: '25px',
+                      right: '25px',
+                      width: '40px',
+                      height: '40px',
+                      borderBottom: '2px solid #7986cb',
+                      borderRight: '2px solid #7986cb',
+                      pointerEvents: 'none',
+                      zIndex: 2
+                    }}
+                  />
+
+                  {/* Decorative border pattern */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '30px',
+                      left: '30px',
+                      right: '30px',
+                      bottom: '30px',
+                      border: '3px solid #3f51b5',
+                      pointerEvents: 'none',
+                      zIndex: 1
+                    }}
+                  />
+                  
+                  {/* Inner decorative border */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '40px',
+                      left: '40px',
+                      right: '40px',
+                      bottom: '40px',
+                      border: '1px solid #7986cb',
+                      opacity: 0.5,
+                      pointerEvents: 'none',
+                      zIndex: 1
+                    }}
+                  />
+
+                  {/* Header Decorative Pattern */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50px',
+                      left: '50px',
+                      right: '50px',
+                      height: '2px',
+                      background: 'linear-gradient(to right, transparent, #3f51b5 20%, #7986cb 50%, #3f51b5 80%, transparent)',
+                      pointerEvents: 'none',
+                      zIndex: 1
+                    }}
+                  />
+                  
+                  <CardContent sx={{ p: 8, position: 'relative', zIndex: 3 }}>
+                    {/* Header Section */}
+                    <Box sx={{ textAlign: 'center', mb: 5, position: 'relative' }}>
+                      {/* Decorative elements above organization name */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
+                        <Box sx={{ width: '80px', height: '2px', bgcolor: '#3f51b5', mr: 2 }} />
+                        <Box sx={{ 
+                          width: '12px', 
+                          height: '12px', 
+                          borderRadius: '50%', 
+                          bgcolor: '#3f51b5',
+                          border: '2px solid #7986cb'
+                        }} />
+                        <Box sx={{ width: '80px', height: '2px', bgcolor: '#3f51b5', ml: 2 }} />
+                      </Box>
+
+                      {/* Organization Name */}
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          color: '#1a237e',
+                          letterSpacing: '2px',
+                          fontSize: '1.15rem',
+                          mb: 3,
+                          textTransform: 'uppercase'
+                        }}
+                      >
+                        AUNG – Advanced Upskilling & New Growth
+                      </Typography>
+
+                      {/* Decorative divider */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3 }}>
+                        <Box sx={{ width: '100px', height: '1px', bgcolor: '#7986cb', mr: 1 }} />
+                        <Box sx={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          borderRadius: '50%', 
+                          bgcolor: '#7986cb',
+                          mx: 1
+                        }} />
+                        <Box sx={{ width: '100px', height: '1px', bgcolor: '#7986cb', ml: 1 }} />
+                      </Box>
+
+                      {/* Title */}
+                      <Typography 
+                        variant="h3" 
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          color: '#1a237e',
+                          fontSize: '2.8rem',
+                          mb: 2,
+                          textTransform: 'uppercase',
+                          letterSpacing: '3px',
+                          lineHeight: 1.2
+                        }}
+                      >
+                        Course Completion Certificate
+                      </Typography>
+
+                      {/* Decorative divider below title */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3 }}>
+                        <Box sx={{ width: '120px', height: '3px', bgcolor: '#3f51b5', mr: 2 }} />
+                        <Box sx={{ 
+                          width: '16px', 
+                          height: '16px', 
+                          borderRadius: '50%', 
+                          bgcolor: '#3f51b5',
+                          border: '3px solid #7986cb'
+                        }} />
+                        <Box sx={{ width: '120px', height: '3px', bgcolor: '#3f51b5', ml: 2 }} />
+                      </Box>
+                    </Box>
+
+                    {/* Certificate Body */}
+                    <Box sx={{ textAlign: 'center', my: 6, px: 2 }}>
+                      {/* Decorative element before text */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3 }}>
+                        <Box sx={{ width: '60px', height: '1px', bgcolor: '#7986cb', opacity: 0.6 }} />
+                      </Box>
+
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontSize: '1.3rem', 
+                          mb: 4,
+                          color: '#424242',
+                          fontStyle: 'italic',
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        This is to certify that
+                      </Typography>
+                      
+                      {/* Student Name */}
+                      <Box sx={{ mb: 5, position: 'relative' }}>
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          left: '50%', 
+                          transform: 'translateX(-50%)',
+                          top: '-10px',
+                          width: '200px',
+                          height: '2px',
+                          background: 'linear-gradient(to right, transparent, #3f51b5, transparent)'
+                        }} />
+                        <Typography 
+                          variant="h3" 
+                          sx={{ 
+                            fontWeight: 'bold', 
+                            color: '#1a237e', 
+                            mb: 1,
+                            fontSize: '2.5rem',
+                            textDecoration: 'underline',
+                            textDecorationColor: '#3f51b5',
+                            textDecorationThickness: '4px',
+                            textUnderlineOffset: '12px',
+                            letterSpacing: '1px'
+                          }}
+                        >
+                          {confirmedName || user?.name || user?.username || 'Student'}
+                        </Typography>
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          left: '50%', 
+                          transform: 'translateX(-50%)',
+                          bottom: '-10px',
+                          width: '200px',
+                          height: '2px',
+                          background: 'linear-gradient(to right, transparent, #3f51b5, transparent)'
+                        }} />
+                      </Box>
+                      
+                      {/* Reason */}
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontSize: '1.15rem', 
+                          mb: 4,
+                          color: '#424242',
+                          maxWidth: '650px',
+                          mx: 'auto',
+                          lineHeight: 2,
+                          letterSpacing: '0.3px'
+                        }}
+                      >
+                        has successfully completed all course materials and requirements demonstrating 
+                        proficiency and commitment to learning
+                      </Typography>
+                      
+                      {/* Decorative element before course name */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3 }}>
+                        <Box sx={{ width: '80px', height: '1px', bgcolor: '#7986cb', opacity: 0.6 }} />
+                      </Box>
+                      
+                      {/* Course Name */}
+                      <Typography 
+                        variant="h5" 
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          mb: 2,
+                          color: '#1a237e',
+                          fontSize: '2rem',
+                          fontStyle: 'italic',
+                          letterSpacing: '1px'
+                        }}
+                      >
+                        {course?.title || 'Course'}
+                      </Typography>
+                    </Box>
+
+                    {/* Footer Decorative Pattern */}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: '50px',
+                        left: '50px',
+                        right: '50px',
+                        height: '2px',
+                        background: 'linear-gradient(to right, transparent, #3f51b5 20%, #7986cb 50%, #3f51b5 80%, transparent)',
+                        pointerEvents: 'none',
+                        zIndex: 1
+                      }}
+                    />
+
+                    {/* Footer Section */}
+                    <Box sx={{ mt: 10, pt: 6 }}>
+                      {/* Decorative divider before instructors */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
+                        <Box sx={{ width: '100px', height: '1px', bgcolor: '#7986cb', opacity: 0.5 }} />
+                      </Box>
+
+                      {/* Row 1: Three Instructors with Signatures */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-start', mb: 5, gap: 3, px: 2 }}>
+                        {/* Instructor 1 */}
+                        <Box sx={{ flex: 1, textAlign: 'center', minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                          <Box>
+                            <Box sx={{ mb: 0, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
+                              <img 
+                                src="/images/Thiha_Sign.png" 
+                                alt="Instructor Signature" 
+                                style={{ 
+                                  maxWidth: '160px', 
+                                  maxHeight: '65px',
+                                  width: 'auto',
+                                  height: 'auto',
+                                  objectFit: 'contain',
+                                  display: 'block'
+                                }} 
+                              />
+                            </Box>
+                            <Divider 
+                              sx={{ 
+                                width: '160px', 
+                                borderWidth: 1.5, 
+                                borderColor: '#424242', 
+                                mb: 0.5,
+                                mt: 0,
+                                mx: 'auto'
+                              }} 
+                            />
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                color: '#1a237e', 
+                                fontWeight: '600',
+                                fontSize: '1rem',
+                                lineHeight: 1.4,
+                                letterSpacing: '0.5px',
+                                mt: 0
+                              }}
+                            >
+                              {course?.certificateInstructorName1 === 'Naing' || !course?.certificateInstructorName1 
+                                ? 'Thiha Naing' 
+                                : course.certificateInstructorName1}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Instructor 2 */}
+                        <Box sx={{ flex: 1, textAlign: 'center', minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                          <Box>
+                            <Box sx={{ mb: 0, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
+                              <img 
+                                src="/images/Thiha_Sign.png" 
+                                alt="Instructor Signature" 
+                                style={{ 
+                                  maxWidth: '160px', 
+                                  maxHeight: '65px',
+                                  width: 'auto',
+                                  height: 'auto',
+                                  objectFit: 'contain',
+                                  display: 'block'
+                                }} 
+                              />
+                            </Box>
+                            <Divider 
+                              sx={{ 
+                                width: '160px', 
+                                borderWidth: 1.5, 
+                                borderColor: '#424242', 
+                                mb: 0.5,
+                                mt: 0,
+                                mx: 'auto'
+                              }} 
+                            />
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                color: '#1a237e', 
+                                fontWeight: '600',
+                                fontSize: '1rem',
+                                lineHeight: 1.4,
+                                letterSpacing: '0.5px',
+                                mt: 0
+                              }}
+                            >
+                              {course?.certificateInstructorName2 || 'Nay Myo Khine'}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Instructor 3 */}
+                        <Box sx={{ flex: 1, textAlign: 'center', minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                          <Box>
+                            <Box sx={{ mb: 0, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
+                              <img 
+                                src="/images/Thiha_Sign.png" 
+                                alt="Instructor Signature" 
+                                style={{ 
+                                  maxWidth: '160px', 
+                                  maxHeight: '65px',
+                                  width: 'auto',
+                                  height: 'auto',
+                                  objectFit: 'contain',
+                                  display: 'block'
+                                }} 
+                              />
+                            </Box>
+                            <Divider 
+                              sx={{ 
+                                width: '160px', 
+                                borderWidth: 1.5, 
+                                borderColor: '#424242', 
+                                mb: 0.5,
+                                mt: 0,
+                                mx: 'auto'
+                              }} 
+                            />
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                color: '#1a237e', 
+                                fontWeight: '600',
+                                fontSize: '1rem',
+                                lineHeight: 1.4,
+                                letterSpacing: '0.5px',
+                                mt: 0
+                              }}
+                            >
+                              {course?.certificateInstructorName3 || 'Min Thiha'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      {/* Decorative divider between instructors and date */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
+                        <Box sx={{ width: '150px', height: '1px', bgcolor: '#7986cb', opacity: 0.5 }} />
+                      </Box>
+
+                      {/* Row 2: Date */}
+                      <Box sx={{ textAlign: 'center', mb: 5 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#424242', 
+                            fontWeight: 'bold', 
+                            mb: 1.5,
+                            fontSize: '0.95rem',
+                            letterSpacing: '1px',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          Date
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            color: '#1a237e', 
+                            fontWeight: '600',
+                            fontSize: '1.1rem',
+                            letterSpacing: '0.5px'
+                          }}
+                        >
+                          {new Date().toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </Typography>
+                      </Box>
+
+                      {/* Decorative divider before stamp */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 4 }}>
+                        <Box sx={{ width: '120px', height: '1px', bgcolor: '#7986cb', opacity: 0.5 }} />
+                      </Box>
+
+                      {/* Row 3: Stamp with Wings */}
+                      <Box sx={{ textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', mb: 2, gap: 0 }}>
+                        {/* Left Wing */}
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            justifyContent: 'flex-end',
+                            width: '350px',
+                            height: '400px',
+                            mr: -30,
+                            mt: -10
+                          }}
+                        >
+                          <img 
+                            src="/images/wing-left.png" 
+                            alt="Left Wing" 
+                            style={{ 
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              display: 'block'
+                            }} 
+                          />
+                        </Box>
+
+                        {/* Stamp */}
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '300px',
+                            height: '300px'
+                          }}
+                        >
+                          <img 
+                            src="/images/stamp.png" 
+                            alt="AUNG Stamp" 
+                            style={{ 
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              display: 'block'
+                            }} 
+                          />
+                        </Box>
+
+                        {/* Right Wing */}
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            justifyContent: 'flex-start',
+                            width: '350px',
+                            height: '400px',
+                            ml: -29,
+                            mt: -10
+                          }}
+                        >
+                          <img 
+                            src="/images/wing-right.png" 
+                            alt="Right Wing" 
+                            style={{ 
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              display: 'block'
+                            }} 
+                          />
+                        </Box>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<Download />}
+                    onClick={handleDownloadPDF}
+                    sx={{ px: 4 }}
+                  >
+                    Download Certificate (PDF)
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<Download />}
+                    onClick={() => {
+                      // Share certificate
+                      if (navigator.share) {
+                        navigator.share({
+                          title: `Certificate of Completion - ${course?.title}`,
+                          text: `I've completed the course: ${course?.title}`,
+                        });
+                      }
+                    }}
+                    sx={{ px: 4 }}
+                  >
+                    Share Certificate
+                  </Button>
+                </Box>
+
+                <Box sx={{ mt: 4, p: 3, bgcolor: 'success.light', borderRadius: 2, maxWidth: 600, mx: 'auto' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', mb: 2 }}>
+                    <CheckCircle sx={{ fontSize: 40, color: 'success.main' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      Congratulations!
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" align="center">
+                    You have successfully completed all course materials. Your dedication and hard work have paid off!
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           )}
         </Box>
