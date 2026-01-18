@@ -106,10 +106,30 @@ const Home = () => {
   ];
 
   const statistics = [
-    { number: '5,000+', label: t('home.statistics.coursesAvailable') },
-    { number: '100K+', label: t('home.statistics.activeStudents') },
-    { number: '500+', label: t('home.statistics.expertInstructors') },
-    { number: '50+', label: t('home.statistics.countries') }
+    { 
+      number: '1,000+', 
+      label: t('home.statistics.activeStudents'),
+      icon: <People />,
+      color: '#3b82f6'
+    },
+    { 
+      number: '150+', 
+      label: t('home.statistics.coursesAvailable'),
+      icon: <MenuBook />,
+      color: '#10b981'
+    },
+    { 
+      number: '95%', 
+      label: t('home.statistics.graduationRate'),
+      icon: <WorkspacePremium />,
+      color: '#f59e0b'
+    },
+    { 
+      number: '24/7', 
+      label: t('home.statistics.onlineLearningHours'),
+      icon: <AccessTime />,
+      color: '#8b5cf6'
+    }
   ];
 
   const howItWorks = [
@@ -213,223 +233,290 @@ const Home = () => {
   };
 
   return (
-    <Box>
-      {/* Hero Section */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 25%, #ec4899 50%, #f59e0b 75%, #6366f1 100%)',
-          backgroundSize: '400% 400%',
-          animation: 'gradient 15s ease infinite',
-          color: 'white',
-          py: { xs: 8, md: 15 },
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          minHeight: { xs: '70vh', md: '85vh' },
-          display: 'flex',
-          alignItems: 'center',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 70%)',
-            animation: 'float 20s ease-in-out infinite',
-            pointerEvents: 'none',
-          },
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: '-50%',
-            left: '-50%',
-            width: '200%',
-            height: '200%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '50px 50px',
-            animation: 'rotate 20s linear infinite',
-            pointerEvents: 'none',
-            opacity: 0.3,
-          },
-        }}
-      >
-        {/* Floating Icons - Hidden on mobile for performance */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '10%',
-            left: '10%',
-            animation: 'float 6s ease-in-out infinite',
-            opacity: { xs: 0, md: 0.3 },
-            zIndex: 1,
-            display: { xs: 'none', md: 'block' },
-          }}
-        >
-          <School sx={{ fontSize: { md: 50, lg: 60 }, color: 'rgba(255,255,255,0.5)' }} />
-        </Box>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '20%',
-            right: '15%',
-            animation: 'floatReverse 8s ease-in-out infinite',
-            opacity: { xs: 0, md: 0.3 },
-            zIndex: 1,
-            display: { xs: 'none', md: 'block' },
-          }}
-        >
-          <MenuBook sx={{ fontSize: { md: 40, lg: 50 }, color: 'rgba(255,255,255,0.5)' }} />
-        </Box>
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: '15%',
-            left: '20%',
-            animation: 'float 7s ease-in-out infinite',
-            opacity: { xs: 0, md: 0.3 },
-            zIndex: 1,
-            display: { xs: 'none', md: 'block' },
-          }}
-        >
-          <WorkspacePremium sx={{ fontSize: { md: 45, lg: 55 }, color: 'rgba(255,255,255,0.5)' }} />
-        </Box>
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: '20%',
-            right: '10%',
-            animation: 'floatReverse 9s ease-in-out infinite',
-            opacity: { xs: 0, md: 0.3 },
-            zIndex: 1,
-            display: { xs: 'none', md: 'block' },
-          }}
-        >
-          <PlayCircle sx={{ fontSize: { md: 55, lg: 65 }, color: 'rgba(255,255,255,0.5)' }} />
-        </Box>
-
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
-          <Box
-            sx={{
-              animation: 'slideInUp 1s ease-out',
-              px: { xs: 2, sm: 3 },
-            }}
-          >
-            <Typography 
-              variant="h1" 
-              component="h1" 
-              gutterBottom
+    <Box sx={{ backgroundColor: '#ffffff' }}>
+      {/* Hero Section - Modern Split Layout */}
+      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 }, px: { xs: 2, sm: 3 } }}>
+        <Grid container spacing={4} alignItems="center">
+          {/* Left Side - Content */}
+          <Grid item xs={12} md={6}>
+            {/* Welcome Banner */}
+            <Box
               sx={{
-                fontSize: { xs: '2rem', sm: '3rem', md: '4rem', lg: '5.5rem' },
-                fontWeight: 900,
-                mb: { xs: 2, md: 3 },
-                background: 'linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0.9) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                textShadow: '0 4px 20px rgba(255,255,255,0.3)',
-                letterSpacing: { xs: '-0.02em', md: '-0.03em' },
-                lineHeight: { xs: 1.2, md: 1.1 },
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                mb: 3,
+                px: 2,
+                py: 0.75,
+                borderRadius: 3,
+                backgroundColor: '#e0f2fe',
+                color: '#0369a1',
+                fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+                fontWeight: 600,
+                animation: 'slideInDown 0.8s ease-out',
               }}
             >
-              {t('home.heroTitle')}
+              <School sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {t('home.welcomeBanner')}
+              </Typography>
+            </Box>
+
+            {/* Main Headline */}
+            <Typography
+              variant="h1"
+              component="h1"
+              gutterBottom
+              sx={{
+                fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem', lg: '5rem' },
+                fontWeight: 800,
+                mb: 2,
+                color: '#1e293b',
+                lineHeight: 1.1,
+                letterSpacing: '-0.02em',
+                animation: 'slideInUp 0.8s ease-out 0.2s both',
+              }}
+            >
+              {t('home.heroTitle')}{' '}
+              <Box
+                component="span"
+                sx={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                {t('home.heroTitleHighlight')}
+              </Box>
             </Typography>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                mb: { xs: 4, md: 6 }, 
-                opacity: 0.98,
-                fontSize: { xs: '1rem', sm: '1.15rem', md: '1.35rem', lg: '1.6rem' },
-                maxWidth: '800px',
-                mx: 'auto',
-                lineHeight: { xs: 1.6, md: 1.7 },
+
+            {/* Description */}
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 4,
+                color: '#64748b',
+                fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
+                lineHeight: 1.7,
                 fontWeight: 400,
-                animation: 'fadeIn 1.2s ease-out 0.3s both',
-                px: { xs: 1, sm: 0 },
+                maxWidth: '540px',
+                animation: 'slideInUp 0.8s ease-out 0.4s both',
               }}
             >
               {t('home.heroSubtitle')}
             </Typography>
-            <Box 
-              sx={{ 
-                display: 'flex', 
+
+            {/* CTA Buttons */}
+            <Box
+              sx={{
+                display: 'flex',
                 flexDirection: { xs: 'column', sm: 'row' },
-                gap: { xs: 2, sm: 3 }, 
-                justifyContent: 'center', 
-                alignItems: 'center',
-                animation: 'slideInUp 1s ease-out 0.6s both',
-                width: '100%',
-                px: { xs: 2, sm: 0 },
+                gap: 2,
+                mb: { xs: 4, md: 6 },
+                animation: 'slideInUp 0.8s ease-out 0.6s both',
               }}
             >
               <Button
                 variant="contained"
                 size="large"
-                startIcon={<PlayCircle />}
-                fullWidth={isMobile}
-                sx={{ 
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)',
-                  color: '#6366f1',
+                endIcon={<PlayCircle />}
+                onClick={() => navigate('/courses')}
+                sx={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
+                  color: 'white',
                   px: { xs: 4, sm: 5 },
-                  py: { xs: 1.5, md: 2 },
-                  fontSize: { xs: '1rem', sm: '1.1rem', md: '1.2rem' },
-                  fontWeight: 800,
-                  borderRadius: { xs: 3, md: 4 },
-                  minHeight: { xs: 48, sm: 52, md: 56 },
-                  boxShadow: '0 15px 35px rgba(0,0,0,0.3), 0 0 40px rgba(255,255,255,0.3)',
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': { 
-                    background: 'linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%)',
-                    transform: { xs: 'scale(0.98)', md: 'translateY(-4px) scale(1.05)' },
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.4), 0 0 60px rgba(255,255,255,0.4)',
-                  },
-                  '&:active': {
-                    transform: 'scale(0.95)',
+                  py: { xs: 1.5, md: 1.75 },
+                  fontSize: { xs: '1rem', sm: '1.125rem' },
+                  fontWeight: 700,
+                  borderRadius: 3,
+                  minHeight: { xs: 48, sm: 52 },
+                  boxShadow: '0 10px 25px rgba(59, 130, 246, 0.3)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #2563eb 0%, #059669 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 15px 35px rgba(59, 130, 246, 0.4)',
                   },
                 }}
+              >
+                {t('home.startLearningToday')}
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
                 onClick={() => navigate('/courses')}
+                sx={{
+                  borderColor: '#cbd5e1',
+                  borderWidth: 2,
+                  color: '#1e293b',
+                  px: { xs: 4, sm: 5 },
+                  py: { xs: 1.5, md: 1.75 },
+                  fontSize: { xs: '1rem', sm: '1.125rem' },
+                  fontWeight: 600,
+                  borderRadius: 3,
+                  minHeight: { xs: 48, sm: 52 },
+                  backgroundColor: 'white',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    borderColor: '#94a3b8',
+                    backgroundColor: '#f8fafc',
+                    transform: 'translateY(-2px)',
+                  },
+                }}
               >
                 {t('home.browseCourses')}
               </Button>
-              {!user && (
-                <Button
-                  variant="outlined"
-                  size="large"
-                  startIcon={<School />}
-                  fullWidth={isMobile}
-                  sx={{ 
-                    borderColor: 'white', 
-                    borderWidth: { xs: 2, md: 3 },
-                    color: 'white',
-                    px: { xs: 4, sm: 5 },
-                    py: { xs: 1.5, md: 2 },
-                    fontSize: { xs: '1rem', sm: '1.1rem', md: '1.2rem' },
-                    fontWeight: 800,
-                    borderRadius: { xs: 3, md: 4 },
-                    minHeight: { xs: 48, sm: 52, md: 56 },
-                    backgroundColor: 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(15px)',
-                    boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:hover': { 
-                      borderColor: 'white', 
-                      backgroundColor: 'rgba(255,255,255,0.25)',
-                      transform: { xs: 'scale(0.98)', md: 'translateY(-4px) scale(1.05)' },
-                      boxShadow: '0 15px 35px rgba(0,0,0,0.3), 0 0 40px rgba(255,255,255,0.3)',
-                    },
-                    '&:active': {
-                      transform: 'scale(0.95)',
-                    },
-                  }}
-                  onClick={() => navigate('/register')}
-                >
-                  {t('home.getStarted')}
-                </Button>
-              )}
             </Box>
-          </Box>
-        </Container>
-      </Box>
+
+            {/* Statistics */}
+            <Grid container spacing={3} sx={{ animation: 'slideInUp 0.8s ease-out 0.8s both' }}>
+              {statistics.map((stat, index) => (
+                <Grid item xs={6} sm={3} key={index}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: { xs: 'flex-start', sm: 'center' },
+                      gap: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 0.5,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          p: 1,
+                          borderRadius: 2,
+                          backgroundColor: `${stat.color}15`,
+                          color: stat.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {React.cloneElement(stat.icon, {
+                          sx: { fontSize: { xs: 20, sm: 24 } },
+                        })}
+                      </Box>
+                    </Box>
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: 800,
+                        color: '#1e293b',
+                        fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {stat.number}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: '#64748b',
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                        fontWeight: 500,
+                        textAlign: { xs: 'left', sm: 'center' },
+                      }}
+                    >
+                      {stat.label}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
+
+          {/* Right Side - Illustration */}
+          <Grid item xs={12} md={6}>
+            <Box
+              sx={{
+                position: 'relative',
+                height: { xs: '400px', md: '600px' },
+                borderRadius: 4,
+                overflow: 'hidden',
+                animation: 'slideInRight 1s ease-out 0.3s both',
+                backgroundColor: '#f0fdf4',
+                backgroundImage: 'radial-gradient(circle at 30% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80") center/cover',
+                  opacity: 0.9,
+                  zIndex: 1,
+                },
+              }}
+            >
+              {/* Decorative Elements */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 20,
+                  right: 20,
+                  zIndex: 2,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  backgroundColor: 'white',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  animation: 'float 3s ease-in-out infinite',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: '#10b981',
+                  }}
+                />
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e293b' }}>
+                  {t('home.badges.onlineClassesActive')}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 20,
+                  right: 20,
+                  zIndex: 2,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  backgroundColor: 'white',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  animation: 'float 3s ease-in-out infinite 1.5s',
+                }}
+              >
+                <WorkspacePremium sx={{ fontSize: 20, color: '#f59e0b' }} />
+                <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e293b' }}>
+                  {t('home.badges.successRate')}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
 
       {/* Features Section */}
       <Container maxWidth="lg" sx={{ py: { xs: 6, sm: 8, md: 12 }, px: { xs: 2, sm: 3 } }}>
@@ -796,122 +883,6 @@ const Home = () => {
               {t('common.courses')}
             </Button>
           </Box>
-        </Container>
-      </Box>
-
-      {/* Statistics Section */}
-      <Box 
-        sx={{ 
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 30%, #ec4899 60%, #6366f1 100%)',
-          backgroundSize: '400% 400%',
-          animation: 'gradient 12s ease infinite',
-          color: 'white', 
-          py: { xs: 8, md: 12 },
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'radial-gradient(circle at 30% 50%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)',
-            animation: 'float 15s ease-in-out infinite',
-            pointerEvents: 'none',
-          },
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-            animation: 'rotate 30s linear infinite',
-            pointerEvents: 'none',
-            opacity: 0.2,
-          },
-        }}
-      >
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <Grid container spacing={4}>
-            {statistics.map((stat, index) => (
-              <Grid 
-                item 
-                xs={6} 
-                md={3} 
-                key={index}
-                sx={{
-                  animation: `scaleIn 0.8s ease-out ${index * 0.2}s both`,
-                }}
-              >
-                <Box 
-                  textAlign="center"
-                  sx={{
-                    p: 3,
-                    borderRadius: 4,
-                    background: 'rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(10px)',
-                    border: '2px solid rgba(255,255,255,0.2)',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%)',
-                      opacity: 0,
-                      transition: 'opacity 0.4s ease',
-                    },
-                    '&:hover': {
-                      transform: 'translateY(-8px) scale(1.08)',
-                      background: 'rgba(255,255,255,0.15)',
-                      borderColor: 'rgba(255,255,255,0.4)',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.2), 0 0 60px rgba(255,255,255,0.2)',
-                      '&::before': {
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                >
-                  <Typography 
-                    variant="h2" 
-                    component="div" 
-                    sx={{ 
-                      fontWeight: 900, 
-                      mb: 1.5,
-                      fontSize: { xs: '2.25rem', md: '3.5rem' },
-                      background: 'linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0.9) 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      textShadow: '0 4px 20px rgba(255,255,255,0.3)',
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {stat.number}
-                  </Typography>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      opacity: 0.98,
-                      fontWeight: 600,
-                      fontSize: { xs: '0.95rem', md: '1.1rem' },
-                      letterSpacing: '0.02em',
-                    }}
-                  >
-                    {stat.label}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
         </Container>
       </Box>
 
