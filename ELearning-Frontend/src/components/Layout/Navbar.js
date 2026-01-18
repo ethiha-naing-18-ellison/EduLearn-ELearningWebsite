@@ -10,7 +10,9 @@ import {
   Box,
   Avatar,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Select,
+  FormControl
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -19,17 +21,23 @@ import {
   Dashboard,
   Add,
   ExitToApp,
-  BookOnline
+  BookOnline,
+  Language
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { getTranslation } from '../../utils/translations';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { language, changeLanguage } = useLanguage();
   const [anchorEl, setAnchorEl] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const t = (key) => getTranslation(language, key);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -79,8 +87,31 @@ const Navbar = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Language Switcher */}
+          <FormControl size="small" sx={{ minWidth: 120, backgroundColor: 'rgba(255,255,255,0.1)' }}>
+            <Select
+              value={language}
+              onChange={(e) => changeLanguage(e.target.value)}
+              sx={{
+                color: 'white',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255,255,255,0.3)',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255,255,255,0.5)',
+                },
+                '& .MuiSvgIcon-root': {
+                  color: 'white',
+                },
+              }}
+            >
+              <MenuItem value="en">English</MenuItem>
+              <MenuItem value="mm">မြန်မာ</MenuItem>
+            </Select>
+          </FormControl>
+
           <Button color="inherit" onClick={() => navigate('/courses')}>
-            Courses
+            {t('common.courses')}
           </Button>
 
           {user ? (
@@ -91,7 +122,7 @@ const Navbar = () => {
                 startIcon={<BookOnline />}
                 onClick={handleMyCourses}
               >
-                My Courses
+                {t('common.myCourses')}
               </Button>
 
               {/* Create Course - Only for Instructors/Admins */}
@@ -101,7 +132,7 @@ const Navbar = () => {
                   startIcon={<Add />}
                   onClick={handleCreateCourse}
                 >
-                  Create Course
+                  {t('dashboard.createNewCourse')}
                 </Button>
               ) : null}
 
@@ -110,7 +141,7 @@ const Navbar = () => {
                 startIcon={<Dashboard />}
                 onClick={handleDashboard}
               >
-                Dashboard
+                {t('common.dashboard')}
               </Button>
 
               <IconButton
@@ -146,21 +177,21 @@ const Navbar = () => {
               >
                 <MenuItem onClick={handleProfile}>
                   <AccountCircle sx={{ mr: 1 }} />
-                  Profile
+                  {t('common.profile')}
                 </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   <ExitToApp sx={{ mr: 1 }} />
-                  Logout
+                  {t('common.logout')}
                 </MenuItem>
               </Menu>
-            </>
+            </> 
           ) : (
             <>
               <Button color="inherit" onClick={() => navigate('/login')}>
-                Login
+                {t('common.login')}
               </Button>
               <Button color="inherit" onClick={() => navigate('/register')}>
-                Sign Up
+                {t('common.register')}
               </Button>
             </>
           )}

@@ -59,6 +59,8 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -66,7 +68,9 @@ import html2canvas from 'html2canvas';
 const CourseLearning = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { language } = useLanguage();
+  const t = (key) => getTranslation(language, key);
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -133,8 +137,13 @@ const CourseLearning = () => {
       console.error('Error status:', error.response?.status);
       // Set to empty object on error to avoid stale data
       setMaterialCompletions({});
+      // Handle 401 errors (token expired or invalid)
+      if (error.response?.status === 401) {
+        logout();
+        // Don't redirect here as this is called automatically and might disrupt user experience
+      }
     }
-  }, [user, id]);
+  }, [user, id, logout]);
 
   useEffect(() => {
     fetchCourseData();
@@ -155,14 +164,14 @@ const CourseLearning = () => {
     try {
       const certificateElement = document.getElementById('certificate-card');
       if (!certificateElement) {
-        alert('Certificate not found. Please refresh the page.');
+        alert(t('courseLearning.certificateNotFound'));
         return;
       }
 
       // Show loading state
       const loadingAlert = document.createElement('div');
       loadingAlert.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #1976d2; color: white; padding: 15px 20px; border-radius: 4px; z-index: 10000;';
-      loadingAlert.textContent = 'Generating PDF...';
+      loadingAlert.textContent = t('courseLearning.generatingPDF');
       document.body.appendChild(loadingAlert);
 
       // Preload all images in the certificate element
@@ -255,24 +264,24 @@ const CourseLearning = () => {
       document.body.removeChild(loadingAlert);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
+      alert(t('courseLearning.errorGeneratingPDF'));
     }
   };
   
   // Handle certificate name confirmation
   const handleConfirmCertificateName = () => {
     if (!certificateName || !confirmCertificateName) {
-      setCertificateNameError('Please enter and confirm your name.');
+      setCertificateNameError(t('courseLearning.pleaseEnterConfirmName'));
       return;
     }
     
     if (certificateName !== confirmCertificateName) {
-      setCertificateNameError('Names do not match. Please ensure both fields contain the same name.');
+      setCertificateNameError(t('courseLearning.namesDoNotMatch'));
       return;
     }
     
     if (!nameConfirmationChecked) {
-      setCertificateNameError('Please check the confirmation checkbox.');
+      setCertificateNameError(t('courseLearning.pleaseCheckConfirmation'));
       return;
     }
     
@@ -338,6 +347,14 @@ const CourseLearning = () => {
     } catch (error) {
       console.error('Error checking enrollment:', error);
       console.error('Error response:', error.response?.data);
+      // Handle 401 errors (token expired or invalid)
+      if (error.response?.status === 401) {
+        logout();
+        // Redirect to login if user was trying to access protected content
+        if (user) {
+          navigate('/login');
+        }
+      }
       setEnrolled(false);
     } finally {
       setEnrollmentLoading(false);
@@ -436,6 +453,8 @@ const CourseLearning = () => {
         normalizedType = 'multiplechoice';
       } else if (materialType === 'lesson') {
         normalizedType = 'lesson';
+      } else if (materialType === 'assignment') {
+        normalizedType = 'assignment';
       }
       
       const key = `${normalizedType}_${materialId}`;
@@ -469,6 +488,12 @@ const CourseLearning = () => {
     } catch (error) {
       console.error('Error marking material as complete:', error);
       console.error('Error response:', error.response?.data);
+      // Handle 401 errors (token expired or invalid)
+      if (error.response?.status === 401) {
+        logout();
+        alert(t('courseLearning.sessionExpired'));
+        navigate('/login');
+      }
     }
   };
 
@@ -481,6 +506,8 @@ const CourseLearning = () => {
       normalizedType = 'multiplechoice';
     } else if (materialType === 'lesson') {
       normalizedType = 'lesson';
+    } else if (materialType === 'assignment') {
+      normalizedType = 'assignment';
     }
     const key = `${normalizedType}_${materialId}`;
     const isComplete = materialCompletions[key] === true;
@@ -730,10 +757,10 @@ const CourseLearning = () => {
       // Refresh quiz pass status for this quiz
       await fetchQuizPassStatus([quizId]);
 
-      alert(`Quiz submitted! Score: ${result.score}/${result.totalPoints} (${result.percentage}%)${result.isPassed ? ' - You passed! ✅' : ' - You need to score higher. Keep practicing!'}`);
+      alert(`${t('courseLearning.quizSubmitted')} ${t('courseLearning.score')}: ${result.score}/${result.totalPoints} (${result.percentage}%)${result.isPassed ? ` - ${t('courseLearning.youPassed')} ✅` : ` - ${t('courseLearning.needHigherScore')}`}`);
     } catch (error) {
       console.error('Error submitting quiz:', error);
-      const errorMessage = error.response?.data?.message || 'Error submitting quiz. Please try again.';
+      const errorMessage = error.response?.data?.message || t('courseLearning.errorSubmittingQuiz');
       alert(errorMessage);
     }
   };
@@ -742,7 +769,7 @@ const CourseLearning = () => {
   const handleQuizReset = async (quizId) => {
     // Check if user can retake
     if (!quizCanRetake[quizId]) {
-      alert(`You have reached the maximum number of attempts (${materialContent?.maxAttempts || 3}). You cannot retake this quiz.`);
+      alert(`${t('courseLearning.maxAttemptsReached')} (${materialContent?.maxAttempts || 3}). ${t('courseLearning.cannotRetake')}`);
       return;
     }
 
@@ -929,7 +956,7 @@ const CourseLearning = () => {
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
         <CircularProgress />
         <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading course materials...
+          {t('courseLearning.loadingMaterials')}
         </Typography>
       </Container>
     );
@@ -941,7 +968,7 @@ const CourseLearning = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
         <Alert severity="warning" sx={{ mb: 3 }}>
-          You need to enroll in this course to access the learning materials.
+          {t('courseLearning.enrollRequired')}
         </Alert>
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
           <Button 
@@ -949,7 +976,7 @@ const CourseLearning = () => {
             onClick={() => navigate(`/courses/${id}`)}
             size="large"
           >
-            Go to Course Details
+            {t('courseLearning.goToCourseDetails')}
           </Button>
           <Button 
             variant="outlined" 
@@ -957,7 +984,7 @@ const CourseLearning = () => {
             size="large"
             sx={{ ml: 2 }}
           >
-            Bypass for Testing
+            {t('courseLearning.bypassForTesting')}
           </Button>
         </Box>
       </Container>
@@ -968,7 +995,7 @@ const CourseLearning = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
         <Alert severity="error">
-          Course not found
+          {t('courseDetail.courseNotFound')}
         </Alert>
       </Container>
     );
@@ -1019,12 +1046,12 @@ const CourseLearning = () => {
                 )}
                 {material.dueDate && (
                   <Typography variant="body2" color="text.secondary">
-                    Due: {new Date(material.dueDate).toLocaleDateString()}
+                    {t('courseDetail.due')}: {new Date(material.dueDate).toLocaleDateString()}
                   </Typography>
                 )}
                 {material.questions && material.questions.length > 0 && (
                   <Typography variant="body2" color="text.secondary">
-                    {material.questions.length} questions
+                    {material.questions.length} {t('courseLearning.questions')}
                   </Typography>
                 )}
                 {material.fileSize && (
@@ -1034,12 +1061,12 @@ const CourseLearning = () => {
                 )}
                 {material.totalPoints && (
                   <Typography variant="body2" color="text.secondary">
-                    {material.totalPoints} points
+                    {material.totalPoints} {t('courseLearning.points')}
                   </Typography>
                 )}
                 {material.timeLimit && (
                   <Typography variant="body2" color="text.secondary">
-                    {material.timeLimit} min
+                    {material.timeLimit} {t('courseDetail.minutes')}
                   </Typography>
                 )}
                 {material.isFree && (
@@ -1048,7 +1075,7 @@ const CourseLearning = () => {
               </Box>
             }
           />
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {material.type === 'multiplechoice' ? (
               // For quizzes, check if passed
               quizPassStatus[material.id] === true ? (
@@ -1065,7 +1092,28 @@ const CourseLearning = () => {
               isMaterialComplete(material.type, material.id) ? (
                 <CheckCircle color="success" />
               ) : (
-                <CheckCircle sx={{ color: 'grey.400' }} />
+                // Show "Mark as done" button for assignments and lessons that are not completed
+                (material.type === 'assignment' || material.type === 'lesson') ? (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="success"
+                    startIcon={<CheckCircle />}
+                    onClick={async (e) => {
+                      e.stopPropagation(); // Prevent triggering the ListItem onClick
+                      await markMaterialComplete(material.type, material.id);
+                    }}
+                    sx={{ 
+                      textTransform: 'none',
+                      minWidth: 'auto',
+                      px: 1.5
+                    }}
+                  >
+                    {t('courseLearning.markAsDone')}
+                  </Button>
+                ) : (
+                  <CheckCircle sx={{ color: 'grey.400' }} />
+                )
               )
             )}
           </Box>
@@ -1075,8 +1123,8 @@ const CourseLearning = () => {
       {materials.length === 0 && (
         <ListItem sx={{ px: 0 }}>
           <ListItemText
-            primary="No materials available"
-            secondary="The instructor is still working on adding course materials."
+            primary={t('courseLearning.noMaterialsAvailable')}
+            secondary={t('courseDetail.instructorWorkingOnContent')}
           />
         </ListItem>
       )}
@@ -1110,7 +1158,7 @@ const CourseLearning = () => {
         />
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Course Overview
+            {t('courseLearning.courseOverview')}
           </Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
             {course.description}
@@ -1160,14 +1208,14 @@ const CourseLearning = () => {
           scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label="All" icon={<MenuBook />} iconPosition="start" />
-          <Tab label="Lessons" icon={<MenuBook />} iconPosition="start" />
-          <Tab label="Assignments" icon={<Assignment />} iconPosition="start" />
-          <Tab label="Videos" icon={<VideoLibrary />} iconPosition="start" />
-          <Tab label="Documents" icon={<Description />} iconPosition="start" />
-          <Tab label="Quizzes" icon={<Quiz />} iconPosition="start" />
+          <Tab label={t('courseLearning.all')} icon={<MenuBook />} iconPosition="start" />
+          <Tab label={t('courseLearning.lessons')} icon={<MenuBook />} iconPosition="start" />
+          <Tab label={t('courseLearning.assignments')} icon={<Assignment />} iconPosition="start" />
+          <Tab label={t('courseLearning.videos')} icon={<VideoLibrary />} iconPosition="start" />
+          <Tab label={t('courseLearning.documents')} icon={<Description />} iconPosition="start" />
+          <Tab label={t('courseLearning.quizzes')} icon={<Quiz />} iconPosition="start" />
           <Tab 
-            label="Certification" 
+            label={t('courseLearning.certification')} 
             icon={<WorkspacePremium />} 
             iconPosition="start"
             disabled={!allMaterialsCompleted}
@@ -1185,10 +1233,10 @@ const CourseLearning = () => {
           {tabValue === 0 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                All Course Materials
+                {t('courseLearning.allCourseMaterials')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Browse all course materials in one place. Click on any item to access it.
+                {t('courseLearning.allMaterialsDescription')}
               </Typography>
               {renderMaterialList(generalMaterials, true)}
             </Box>
@@ -1197,10 +1245,10 @@ const CourseLearning = () => {
           {tabValue === 1 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Lessons
+                {t('courseLearning.lessons')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Step-by-step lessons to guide your learning journey.
+                {t('courseLearning.lessonsDescription')}
               </Typography>
               {renderMaterialList(sortedLessons.map(lesson => ({ ...lesson, type: 'lesson' })))}
             </Box>
@@ -1209,10 +1257,10 @@ const CourseLearning = () => {
           {tabValue === 2 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Assignments
+                {t('courseLearning.assignments')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Practice what you've learned with hands-on assignments.
+                {t('courseLearning.assignmentsDescription')}
               </Typography>
               {renderMaterialList(assignments.map(assignment => ({ ...assignment, type: 'assignment' })))}
             </Box>
@@ -1222,10 +1270,10 @@ const CourseLearning = () => {
           {tabValue === 3 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Videos
+                {t('courseLearning.videos')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Watch video content to enhance your learning experience.
+                {t('courseLearning.videosDescription')}
               </Typography>
               {renderMaterialList(videos.map(video => ({ ...video, type: 'video' })))}
             </Box>
@@ -1234,10 +1282,10 @@ const CourseLearning = () => {
           {tabValue === 4 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Documents
+                {t('courseLearning.documents')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Download and read supplementary materials and resources.
+                {t('courseLearning.documentsDescription')}
               </Typography>
               {renderMaterialList(documents.map(document => ({ ...document, type: 'document' })))}
             </Box>
@@ -1246,10 +1294,10 @@ const CourseLearning = () => {
           {tabValue === 5 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Quizzes
+                {t('courseLearning.quizzes')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Test your knowledge with interactive quiz questions.
+                {t('courseLearning.quizzesDescription')}
               </Typography>
               {renderMaterialList(multipleChoices.map(mc => ({ ...mc, type: 'multiplechoice' })))}
             </Box>
@@ -1257,10 +1305,10 @@ const CourseLearning = () => {
 
           {tabValue === 6 && (
             <Box>
-              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Box sx={{ textAlign: 'center', py: 4 }}>
                 <WorkspacePremium sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  Course Completion Certificate
+                  {t('courseLearning.courseCompletionCertificate')}
                 </Typography>
                 <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
                   {course?.title}
@@ -1271,11 +1319,11 @@ const CourseLearning = () => {
                   <Card sx={{ maxWidth: 600, mx: 'auto', p: 4, mb: 4 }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-                        Enter Your Name for the Certificate
+                        {t('courseLearning.enterNameForCertificate')}
                       </Typography>
                       <TextField
                         fullWidth
-                        label="Enter your name"
+                        label={t('courseLearning.enterYourName')}
                         value={certificateName}
                         onChange={(e) => {
                           const nameValue = e.target.value;
@@ -1291,7 +1339,7 @@ const CourseLearning = () => {
                       />
                       <TextField
                         fullWidth
-                        label="Confirm your name"
+                        label={t('courseLearning.confirmYourName')}
                         value={confirmCertificateName}
                         onChange={(e) => {
                           const confirmValue = e.target.value;
@@ -1303,7 +1351,7 @@ const CourseLearning = () => {
                           }
                         }}
                         error={!!certificateNameError || (certificateName && confirmCertificateName && certificateName !== confirmCertificateName)}
-                        helperText={certificateNameError || (certificateName && confirmCertificateName && certificateName !== confirmCertificateName ? 'Names do not match' : 'Please confirm your name matches the above')}
+                        helperText={certificateNameError || (certificateName && confirmCertificateName && certificateName !== confirmCertificateName ? t('courseLearning.namesDoNotMatch') : t('courseLearning.confirmNameMatches'))}
                         required
                         sx={{ mb: 2 }}
                       />
@@ -1314,7 +1362,7 @@ const CourseLearning = () => {
                             onChange={(e) => setNameConfirmationChecked(e.target.checked)}
                           />
                         }
-                        label="I confirm this is my correct name for the certificate"
+                        label={t('courseLearning.confirmNameCheckbox')}
                         sx={{ mb: 2 }}
                       />
                       <Button
@@ -1324,7 +1372,7 @@ const CourseLearning = () => {
                         onClick={handleConfirmCertificateName}
                         disabled={!certificateName || !confirmCertificateName || certificateName !== confirmCertificateName || !nameConfirmationChecked}
                       >
-                        Confirm
+                        {t('common.submit')}
                       </Button>
                       {certificateNameError && (
                         <Alert severity="error" sx={{ mt: 2 }}>
@@ -1606,7 +1654,7 @@ const CourseLearning = () => {
                           letterSpacing: '0.5px'
                         }}
                       >
-                        This is to certify that
+                        {t('courseLearning.certifyText')}
                       </Typography>
                       
                       {/* Student Name */}
@@ -1660,8 +1708,7 @@ const CourseLearning = () => {
                           letterSpacing: '0.3px'
                         }}
                       >
-                        has successfully completed all course materials and requirements demonstrating 
-                        proficiency and commitment to learning
+                        {t('courseLearning.completionText')}
                       </Typography>
                       
                       {/* Decorative element before course name */}
@@ -1858,7 +1905,7 @@ const CourseLearning = () => {
                             textTransform: 'uppercase'
                           }}
                         >
-                          Date
+                          {t('courseLearning.date')}
                         </Typography>
                         <Typography 
                           variant="body1" 
@@ -1966,7 +2013,7 @@ const CourseLearning = () => {
                     onClick={handleDownloadPDF}
                     sx={{ px: 4 }}
                   >
-                    Download Certificate (PDF)
+                    {t('courseLearning.downloadCertificate')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -1976,14 +2023,14 @@ const CourseLearning = () => {
                       // Share certificate
                       if (navigator.share) {
                         navigator.share({
-                          title: `Certificate of Completion - ${course?.title}`,
-                          text: `I've completed the course: ${course?.title}`,
+                          title: `${t('courseLearning.certificateOfCompletion')} - ${course?.title}`,
+                          text: `${t('courseLearning.completedCourse')}: ${course?.title}`,
                         });
                       }
                     }}
                     sx={{ px: 4 }}
                   >
-                    Share Certificate
+                    {t('courseLearning.shareCertificate')}
                   </Button>
                 </Box>
 
@@ -1991,11 +2038,11 @@ const CourseLearning = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', mb: 2 }}>
                     <CheckCircle sx={{ fontSize: 40, color: 'success.main' }} />
                     <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                      Congratulations!
+                      {t('courseLearning.congratulations')}
                     </Typography>
                   </Box>
                   <Typography variant="body1" align="center">
-                    You have successfully completed all course materials. Your dedication and hard work have paid off!
+                    {t('courseLearning.completionMessage')}
                   </Typography>
                 </Box>
               </Box>
@@ -2057,7 +2104,7 @@ const CourseLearning = () => {
                   </>
                 )}
                 <Typography variant="h5" component="h2">
-                  {selectedMaterial?.title || 'Loading...'}
+                  {selectedMaterial?.title || t('common.loading')}
                 </Typography>
               </Box>
               <IconButton
@@ -2083,14 +2130,14 @@ const CourseLearning = () => {
                   }}
                 >
                   <CircularProgress size={60} />
-                  <Typography variant="h6">Loading content...</Typography>
+                  <Typography variant="h6">{t('courseLearning.loadingContent')}</Typography>
                 </Box>
               ) : materialContent ? (
                 <Box sx={{ height: '100%' }}>
                   {selectedMaterial?.type === 'lesson' && (
                     <Box sx={{ p: 3, height: '100%' }}>
                       <Typography variant="h6" gutterBottom>
-                        Lesson Content
+                        {t('courseLearning.lessonContent')}
                       </Typography>
                       <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
                         {materialContent.content}
@@ -2099,7 +2146,7 @@ const CourseLearning = () => {
                       {(materialContent.videoUrl || materialContent.videoFile) && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="h6" gutterBottom>
-                            Video
+                            {t('courseLearning.video')}
                           </Typography>
                           <Box
                             sx={{
@@ -2137,7 +2184,7 @@ const CourseLearning = () => {
                       {materialContent.audioUrl && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="h6" gutterBottom>
-                            Audio
+                            {t('courseLearning.audio')}
                           </Typography>
                           <audio controls style={{ width: '100%' }}>
                             <source src={materialContent.audioUrl} type="audio/mpeg" />
@@ -2149,7 +2196,7 @@ const CourseLearning = () => {
                       {(materialContent.documentUrl || materialContent.documentFile) && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="h6" gutterBottom>
-                            Document
+                            {t('courseLearning.document')}
                           </Typography>
                           <Button
                             variant="contained"
@@ -2158,7 +2205,7 @@ const CourseLearning = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            Download Document
+                            {t('courseLearning.downloadDocument')}
                           </Button>
                         </Box>
                       )}
@@ -2168,7 +2215,7 @@ const CourseLearning = () => {
                   {selectedMaterial?.type === 'assignment' && (
                     <Box sx={{ p: 3, height: '100%' }}>
                       <Typography variant="h6" gutterBottom>
-                        Assignment Details
+                        {t('courseLearning.assignmentDetails')}
                       </Typography>
                       <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
                         {materialContent.description}
@@ -2177,7 +2224,7 @@ const CourseLearning = () => {
                       {materialContent.instructions && (
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="h6" gutterBottom>
-                            Instructions
+                            {t('courseLearning.instructions')}
                           </Typography>
                           <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
                             {materialContent.instructions}
@@ -2187,23 +2234,23 @@ const CourseLearning = () => {
                       
                       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
                         <Chip
-                          label={`Max Points: ${materialContent.maxPoints}`}
+                          label={`${t('courseLearning.maxPoints')}: ${materialContent.maxPoints}`}
                           color="primary"
                           variant="outlined"
                         />
                         <Chip
-                          label={`Due: ${new Date(materialContent.dueDate).toLocaleDateString()}`}
+                          label={`${t('courseDetail.due')}: ${new Date(materialContent.dueDate).toLocaleDateString()}`}
                           color="secondary"
                           variant="outlined"
                         />
                         <Chip
-                          label={`Type: ${materialContent.type}`}
+                          label={`${t('courseLearning.type')}: ${materialContent.type}`}
                           color="info"
                           variant="outlined"
                         />
                         {materialContent.allowLateSubmission && (
                           <Chip
-                            label={`Late Penalty: ${materialContent.latePenaltyPercentage}%`}
+                            label={`${t('courseLearning.latePenalty')}: ${materialContent.latePenaltyPercentage}%`}
                             color="warning"
                             variant="outlined"
                           />
@@ -2211,7 +2258,7 @@ const CourseLearning = () => {
                       </Box>
                       
                       <Button variant="contained" size="large">
-                        Start Assignment
+                        {t('courseLearning.startAssignment')}
                       </Button>
                     </Box>
                   )}
@@ -2340,7 +2387,7 @@ const CourseLearning = () => {
                               disabled
                               sx={{ minWidth: 200 }}
                             >
-                              Completed
+                              {t('common.completed')}
                             </Button>
                           ) : (
                             <Button
@@ -2351,7 +2398,7 @@ const CourseLearning = () => {
                               onClick={() => markMaterialComplete('video', materialContent.id)}
                               sx={{ minWidth: 200 }}
                             >
-                              Mark as Done
+                              {t('courseLearning.markAsDone')}
                             </Button>
                           )}
                         </Box>
@@ -2368,7 +2415,7 @@ const CourseLearning = () => {
                                   gap: 1
                                 }}>
                                   <Description />
-                                  Transcript
+                                  {t('courseLearning.transcript')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ 
                                   whiteSpace: 'pre-wrap',
@@ -2397,7 +2444,7 @@ const CourseLearning = () => {
                                   gap: 1
                                 }}>
                                   <MenuBook />
-                                  Instructor Notes
+                                  {t('courseLearning.instructorNotes')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ 
                                   whiteSpace: 'pre-wrap',
@@ -2465,7 +2512,7 @@ const CourseLearning = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
-                                      Download PDF
+                                      {t('courseLearning.downloadPDF')}
                                     </Button>
                                   </Box>
                                 </Box>
@@ -2531,11 +2578,10 @@ const CourseLearning = () => {
                                 <Box sx={{ textAlign: 'center', p: 4 }}>
                                   <Description sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
                                   <Typography variant="h6" color="text.secondary" gutterBottom>
-                                    {materialContent.fileFormat?.toUpperCase()} Document
+                                    {materialContent.fileFormat?.toUpperCase()} {t('courseLearning.document')}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                                    This document format cannot be viewed directly in the browser. 
-                                    Please download it to view using Microsoft Office or compatible software.
+                                    {t('courseLearning.documentCannotView')}
                                   </Typography>
                                   <Button
                                     variant="contained"
@@ -2545,7 +2591,7 @@ const CourseLearning = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                   >
-                                    Download {materialContent.fileFormat?.toUpperCase()} Document
+                                    {t('courseLearning.download')} {materialContent.fileFormat?.toUpperCase()} {t('courseLearning.document')}
                                   </Button>
                                 </Box>
                               );
@@ -2581,10 +2627,10 @@ const CourseLearning = () => {
                               <Box sx={{ textAlign: 'center' }}>
                                 <Description sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
                                 <Typography variant="h6" color="text.secondary" gutterBottom>
-                                  Document preview not available
+                                  {t('courseLearning.documentPreviewNotAvailable')}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                  This document cannot be viewed in the browser. Please download it to view.
+                                  {t('courseLearning.documentCannotViewBrowser')}
                                 </Typography>
                                 <Button
                                   variant="contained"
@@ -2594,7 +2640,7 @@ const CourseLearning = () => {
                                   rel="noopener noreferrer"
                                   sx={{ mt: 2 }}
                                 >
-                                  Download Document
+                                  {t('courseLearning.downloadDocument')}
                                 </Button>
                               </Box>
                             );
@@ -2613,36 +2659,36 @@ const CourseLearning = () => {
                         
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                           <Chip
-                            label={`Type: ${materialContent.documentType}`}
+                            label={`${t('courseLearning.type')}: ${materialContent.documentType}`}
                             color="primary"
                             variant="outlined"
                           />
                           <Chip
-                            label={`Format: ${materialContent.fileFormat}`}
+                            label={`${t('courseLearning.format')}: ${materialContent.fileFormat}`}
                             color="secondary"
                             variant="outlined"
                           />
                           <Chip
-                            label={`Size: ${(materialContent.fileSize / 1024 / 1024).toFixed(1)} MB`}
+                            label={`${t('courseLearning.size')}: ${(materialContent.fileSize / 1024 / 1024).toFixed(1)} MB`}
                             color="info"
                             variant="outlined"
                           />
                           {materialContent.pageCount > 0 && (
                             <Chip
-                              label={`Pages: ${materialContent.pageCount}`}
+                              label={`${t('courseDetail.pages')}: ${materialContent.pageCount}`}
                               color="warning"
                               variant="outlined"
                             />
                           )}
                           {materialContent.isFree && (
-                            <Chip label="Free" color="success" variant="outlined" />
+                            <Chip label={t('courses.free')} color="success" variant="outlined" />
                           )}
                         </Box>
                         
                         {materialContent.summary && (
                           <Box sx={{ mb: 2 }}>
                             <Typography variant="h6" gutterBottom>
-                              Summary
+                              {t('courseLearning.summary')}
                             </Typography>
                             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                               {materialContent.summary}
@@ -2661,7 +2707,7 @@ const CourseLearning = () => {
                               disabled
                               sx={{ minWidth: 200 }}
                             >
-                              Completed
+                              {t('common.completed')}
                             </Button>
                           ) : (
                             <Button
@@ -2672,7 +2718,7 @@ const CourseLearning = () => {
                               onClick={() => markMaterialComplete('document', materialContent.id)}
                               sx={{ minWidth: 200 }}
                             >
-                              Mark as Done
+                              {t('courseLearning.markAsDone')}
                             </Button>
                           )}
                         </Box>
@@ -2680,7 +2726,7 @@ const CourseLearning = () => {
                         {materialContent.notes && (
                           <Box sx={{ mb: 2 }}>
                             <Typography variant="h6" gutterBottom>
-                              Notes
+                              {t('courseLearning.notes')}
                             </Typography>
                             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                               {materialContent.notes}
@@ -2706,7 +2752,7 @@ const CourseLearning = () => {
                         {materialContent.instructions && (
                           <Box sx={{ p: 2, bgcolor: 'info.light', borderRadius: 1, mb: 3 }}>
                             <Typography variant="h6" gutterBottom sx={{ color: 'info.dark' }}>
-                              Instructions
+                              {t('courseLearning.instructions')}
                             </Typography>
                             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                               {materialContent.instructions}
@@ -2718,38 +2764,38 @@ const CourseLearning = () => {
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
                           <Chip
                             icon={<Quiz />}
-                            label={`${materialContent.questions?.length || 0} Questions`}
+                            label={`${materialContent.questions?.length || 0} ${t('courseLearning.questions')}`}
                             color="primary"
                             variant="filled"
                           />
                           <Chip
-                            label={`${materialContent.totalPoints} Total Points`}
+                            label={`${materialContent.totalPoints} ${t('courseLearning.totalPoints')}`}
                             color="secondary"
                             variant="filled"
                           />
                           {materialContent.timeLimit && (
                             <Chip
-                              label={`${materialContent.timeLimit} Minutes`}
+                              label={`${materialContent.timeLimit} ${t('courseDetail.minutes')}`}
                               color="info"
                               variant="filled"
                             />
                           )}
                           {materialContent.maxAttempts && (
                             <Chip
-                              label={`${materialContent.maxAttempts} Max Attempts`}
+                              label={`${materialContent.maxAttempts} ${t('courseLearning.maxAttempts')}`}
                               color="warning"
                               variant="filled"
                             />
                           )}
                           {materialContent.passingScore && (
                             <Chip
-                              label={`${materialContent.passingScore}% Passing Score`}
+                              label={`${materialContent.passingScore}% ${t('courseLearning.passingScore')}`}
                               color="success"
                               variant="filled"
                             />
                           )}
                           {materialContent.isFree && (
-                            <Chip label="Free Quiz" color="success" variant="outlined" />
+                            <Chip label={t('courseLearning.freeQuiz')} color="success" variant="outlined" />
                           )}
                         </Box>
                       </Box>
@@ -2764,25 +2810,25 @@ const CourseLearning = () => {
                               sx={{ mb: 3 }}
                             >
                               <Typography variant="h6" gutterBottom>
-                                Quiz Results
+                                {t('courseLearning.quizResults')}
                               </Typography>
                               <Typography variant="body1">
-                                Score: {quizResults[materialContent.id].score} / {quizResults[materialContent.id].totalPoints} points ({quizResults[materialContent.id].percentage}%)
+                                {t('courseLearning.score')}: {quizResults[materialContent.id].score} / {quizResults[materialContent.id].totalPoints} {t('courseLearning.points')} ({quizResults[materialContent.id].percentage}%)
                               </Typography>
                               <Typography variant="body2" sx={{ mt: 1 }}>
-                                Attempt: {quizAttempts[materialContent.id] || 0} / {materialContent.maxAttempts || 3}
+                                {t('courseLearning.attempt')}: {quizAttempts[materialContent.id] || 0} / {materialContent.maxAttempts || 3}
                               </Typography>
                               {materialContent.passingScore && (
                                 <Typography variant="body2" sx={{ mt: 1 }}>
-                                  Passing Score: {materialContent.passingScore}%
+                                  {t('courseLearning.passingScore')}: {materialContent.passingScore}%
                                   {quizResults[materialContent.id].percentage >= materialContent.passingScore 
-                                    ? " - You passed! ✅" 
-                                    : " - You need to score higher. Keep practicing!"}
+                                    ? ` - ${t('courseLearning.youPassed')} ✅` 
+                                    : ` - ${t('courseLearning.needHigherScore')}`}
                                 </Typography>
                               )}
                               {!quizCanRetake[materialContent.id] && (
                                 <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
-                                  Maximum attempts reached. This score has been saved.
+                                  {t('courseLearning.maxAttemptsReachedSaved')}
                                 </Typography>
                               )}
                             </Alert>
@@ -2792,13 +2838,13 @@ const CourseLearning = () => {
                           {!quizSubmitted[materialContent.id] && quizAttempts[materialContent.id] > 0 && (
                             <Alert severity="info" sx={{ mb: 3 }}>
                               <Typography variant="body2">
-                                Attempt {quizAttempts[materialContent.id]} of {materialContent.maxAttempts || 3}
+                                {t('courseLearning.attempt')} {quizAttempts[materialContent.id]} {t('courseLearning.of')} {materialContent.maxAttempts || 3}
                               </Typography>
                             </Alert>
                           )}
 
                           <Typography variant="h5" gutterBottom sx={{ mb: 3, color: 'text.primary' }}>
-                            Quiz Questions
+                            {t('courseLearning.quizQuestions')}
                           </Typography>
                           {materialContent.questions.map((question, index) => {
                             const quizId = materialContent.id;
@@ -2811,17 +2857,17 @@ const CourseLearning = () => {
                                 <Box sx={{ mb: 3 }}>
                                   <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Chip 
-                                      label={`Question ${index + 1}`} 
+                                      label={`${t('courseLearning.question')} ${index + 1}`} 
                                       size="small" 
                                       color="primary" 
                                       variant="outlined"
                                     />
                                     <Typography variant="body2" color="text.secondary">
-                                      ({question.points} points)
+                                      ({question.points} {t('courseLearning.points')})
                                     </Typography>
                                     {isSubmitted && questionResult && (
                                       <Chip 
-                                        label={questionResult.correct ? "Correct ✓" : "Incorrect ✗"} 
+                                        label={questionResult.correct ? `${t('courseLearning.correct')} ✓` : `${t('courseLearning.incorrect')} ✗`} 
                                         size="small" 
                                         color={questionResult.correct ? "success" : "error"} 
                                         sx={{ ml: 1 }}
@@ -2835,7 +2881,7 @@ const CourseLearning = () => {
                                 
                                 <Box sx={{ pl: 2 }}>
                                   <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                                    Select your answer:
+                                    {t('courseLearning.selectYourAnswer')}
                                   </Typography>
                                   
                                   {/* Option A */}
@@ -2991,7 +3037,7 @@ const CourseLearning = () => {
                                 {isSubmitted && question.explanation && (
                                   <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                                     <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>
-                                      Explanation
+                                      {t('courseLearning.explanation')}
                                     </Typography>
                                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                                       {question.explanation}
@@ -3003,10 +3049,10 @@ const CourseLearning = () => {
                           })}
                           
                           {/* Max Attempts Reached Warning */}
-                          {quizAttempts[materialContent.id] >= (materialContent.maxAttempts || 3) && !quizSubmitted[materialContent.id] && (
+                                {quizAttempts[materialContent.id] >= (materialContent.maxAttempts || 3) && !quizSubmitted[materialContent.id] && (
                             <Alert severity="error" sx={{ mb: 3 }}>
                               <Typography variant="body1">
-                                You have reached the maximum number of attempts ({materialContent.maxAttempts || 3}) for this quiz. You cannot take it again.
+                                {t('courseLearning.maxAttemptsReached')} ({materialContent.maxAttempts || 3}). {t('courseLearning.cannotRetake')}
                               </Typography>
                             </Alert>
                           )}
@@ -3025,8 +3071,8 @@ const CourseLearning = () => {
                                 }
                               >
                                 {quizAttempts[materialContent.id] >= (materialContent.maxAttempts || 3) 
-                                  ? "Max Attempts Reached" 
-                                  : "Submit Quiz"}
+                                  ? t('courseLearning.maxAttemptsReachedTitle') 
+                                  : t('courseLearning.submitQuiz')}
                               </Button>
                             ) : (
                               <>
@@ -3037,7 +3083,7 @@ const CourseLearning = () => {
                                     sx={{ px: 4, py: 1.5 }}
                                     onClick={() => handleQuizReset(materialContent.id)}
                                   >
-                                    Retake Quiz
+                                    {t('courseLearning.retakeQuiz')}
                                   </Button>
                                 ) : (
                                   <Button 
@@ -3046,7 +3092,7 @@ const CourseLearning = () => {
                                     sx={{ px: 4, py: 1.5 }}
                                     disabled
                                   >
-                                    Max Attempts Reached
+                                    {t('courseLearning.maxAttemptsReachedTitle')}
                                   </Button>
                                 )}
                               </>
@@ -3057,10 +3103,10 @@ const CourseLearning = () => {
                         <Box sx={{ textAlign: 'center', py: 4 }}>
                           <Quiz sx={{ fontSize: 80, mb: 2, color: 'grey.400' }} />
                           <Typography variant="h6" color="text.secondary" gutterBottom>
-                            No questions available
+                            {t('courseLearning.noQuestionsAvailable')}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            This quiz doesn't have any questions yet.
+                            {t('courseLearning.noQuestionsMessage')}
                           </Typography>
                         </Box>
                       )}
@@ -3079,7 +3125,7 @@ const CourseLearning = () => {
                   }}
                 >
                   <Typography variant="h6" color="text.secondary">
-                    Content not available
+                    {t('courseLearning.contentNotAvailable')}
                   </Typography>
                 </Box>
               )}

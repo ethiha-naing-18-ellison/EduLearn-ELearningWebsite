@@ -36,12 +36,17 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
 const CourseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { language } = useLanguage();
+
+  const t = (key) => getTranslation(language, key);
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -100,17 +105,33 @@ const CourseDetail = () => {
       return;
     }
     
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setEnrolled(false);
+      return;
+    }
+    
     try {
       setEnrollmentLoading(true);
       const response = await axios.get(`http://localhost:5000/api/enrollments/check?courseId=${id}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token}`
         }
       });
       setEnrolled(response.data.isEnrolled);
     } catch (error) {
-      console.error('Error checking enrollment:', error);
-      setEnrolled(false);
+      // Handle 401 errors (user not authenticated or token expired)
+      if (error.response?.status === 401) {
+        setEnrolled(false);
+        // Clear invalid token and logout user
+        logout();
+        // Optionally show message and redirect to login
+        // Note: We don't redirect here to avoid disrupting the user's browsing experience
+        // The user can still view course details, they just need to login to enroll
+      } else {
+        console.error('Error checking enrollment:', error);
+        setEnrolled(false);
+      }
     } finally {
       setEnrollmentLoading(false);
     }
@@ -136,11 +157,18 @@ const CourseDetail = () => {
       await checkEnrollment();
     } catch (error) {
       console.error('Error enrolling:', error);
+      // Handle 401 errors (token expired or invalid)
+      if (error.response?.status === 401) {
+        logout();
+        alert(t('courseDetail.sessionExpired'));
+        navigate('/login');
+        return;
+      }
       // Show error message to user
       if (error.response?.status === 409) {
         setEnrolled(true);
       } else {
-        alert('Failed to enroll in course. Please try again.');
+        alert(t('courseDetail.enrollFailed'));
       }
     } finally {
       setEnrollmentLoading(false);
@@ -161,7 +189,7 @@ const CourseDetail = () => {
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
         <CircularProgress />
         <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading course...
+          {t('common.loading')}
         </Typography>
       </Container>
     );
@@ -171,7 +199,7 @@ const CourseDetail = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
         <Alert severity="error">
-          Course not found
+          {t('courseDetail.courseNotFound')}
         </Alert>
       </Container>
     );
@@ -255,7 +283,7 @@ const CourseDetail = () => {
                   size="small" 
                 />
                 <Typography variant="h4" color="primary">
-                  {course.isFree ? 'Free' : `$${course.price}`}
+                  {course.isFree ? t('courses.free') : `$${course.price}`}
                 </Typography>
               </Box>
 
@@ -264,7 +292,7 @@ const CourseDetail = () => {
               </Typography>
 
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                by {course.instructor?.firstName} {course.instructor?.lastName}
+                {t('courses.by')} {course.instructor?.firstName} {course.instructor?.lastName}
               </Typography>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
@@ -277,13 +305,13 @@ const CourseDetail = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <People sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
                   <Typography variant="body2" color="text.secondary">
-                    1,250 students
+                    1,250 {t('courses.students')}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Schedule sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
                   <Typography variant="body2" color="text.secondary">
-                    {course.duration} hours
+                    {course.duration} {t('courseDetail.hours')}
                   </Typography>
                 </Box>
               </Box>
@@ -295,9 +323,9 @@ const CourseDetail = () => {
               {/* Tabs */}
               <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                 <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-                  <Tab label="Curriculum" />
-                  <Tab label="Instructor" />
-                  <Tab label="Reviews" />
+                  <Tab label={t('courseDetail.curriculum')} />
+                  <Tab label={t('courseDetail.instructor')} />
+                  <Tab label={t('courseDetail.reviews')} />
                 </Tabs>
               </Box>
 
@@ -305,7 +333,7 @@ const CourseDetail = () => {
               {tabValue === 0 && (
                 <Box>
                   <Typography variant="h6" gutterBottom>
-                    Course Content
+                    {t('courseDetail.courseContent')}
                   </Typography>
                   <List>
                     {/* Display lessons */}
@@ -319,10 +347,10 @@ const CourseDetail = () => {
                           secondary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                               <Typography variant="body2" color="text.secondary">
-                                {lesson.duration} min
+                                {lesson.duration} {t('courseDetail.minutes')}
                               </Typography>
                               {lesson.isFree && (
-                                <Chip label="Free" size="small" color="success" />
+                                <Chip label={t('courses.free')} size="small" color="success" />
                               )}
                             </Box>
                           }
@@ -348,10 +376,10 @@ const CourseDetail = () => {
                           secondary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                               <Typography variant="body2" color="text.secondary">
-                                Assignment
+                                {t('courseDetail.assignments')}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
-                                Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                                {t('courseDetail.due')}: {new Date(assignment.dueDate).toLocaleDateString()}
                               </Typography>
                             </Box>
                           }
@@ -378,13 +406,13 @@ const CourseDetail = () => {
                           secondary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                               <Typography variant="body2" color="text.secondary">
-                                Video - {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')}
+                                {t('courseDetail.videos')} - {Math.floor(video.duration / 60)}:{(video.duration % 60).toString().padStart(2, '0')}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {video.videoType} • {video.quality}
                               </Typography>
                               {video.isFree && (
-                                <Chip label="Free" size="small" color="success" />
+                                <Chip label={t('courses.free')} size="small" color="success" />
                               )}
                             </Box>
                           }
@@ -410,18 +438,18 @@ const CourseDetail = () => {
                           secondary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                               <Typography variant="body2" color="text.secondary">
-                                Document - {document.documentType}
+                                {t('courseDetail.documents')} - {document.documentType}
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {(document.fileSize / 1024 / 1024).toFixed(1)} MB
                               </Typography>
                               {document.pageCount > 0 && (
                                 <Typography variant="body2" color="text.secondary">
-                                  {document.pageCount} pages
+                                  {document.pageCount} {t('courseDetail.pages')}
                                 </Typography>
                               )}
                               {document.isFree && (
-                                <Chip label="Free" size="small" color="success" />
+                                <Chip label={t('courses.free')} size="small" color="success" />
                               )}
                             </Box>
                           }
@@ -440,8 +468,8 @@ const CourseDetail = () => {
                     {sortedLessons.length === 0 && assignments.length === 0 && videos.length === 0 && documents.length === 0 && (
                       <ListItem sx={{ px: 0 }}>
                         <ListItemText
-                          primary="No course content available yet"
-                          secondary="The instructor is still working on adding course materials."
+                          primary={t('courseDetail.noContentAvailable')}
+                          secondary={t('courseDetail.instructorWorkingOnContent')}
                         />
                       </ListItem>
                     )}
@@ -460,17 +488,16 @@ const CourseDetail = () => {
                         {course.instructor?.firstName} {course.instructor?.lastName}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Senior Web Developer
+                        {t('courseDetail.seniorWebDeveloper')}
                       </Typography>
                       <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                         <Star sx={{ fontSize: 16, color: 'orange', mr: 0.5 }} />
-                        <Typography variant="body2">4.9 Instructor Rating</Typography>
+                        <Typography variant="body2">{t('courseDetail.instructorRating')}</Typography>
                       </Box>
                     </Box>
                   </Box>
                   <Typography variant="body1">
-                    Experienced web developer with 10+ years in the industry. 
-                    Passionate about teaching and helping others learn modern web technologies.
+                    {t('courseDetail.instructorBio')}
                   </Typography>
                 </Box>
               )}
@@ -478,11 +505,11 @@ const CourseDetail = () => {
               {tabValue === 2 && (
                 <Box>
                   <Typography variant="h6" gutterBottom>
-                    Student Reviews
+                    {t('courseDetail.studentReviews')}
                   </Typography>
                   {/* Reviews would go here */}
                   <Typography variant="body2" color="text.secondary">
-                    Reviews coming soon...
+                    {t('courseDetail.reviewsComingSoon')}
                   </Typography>
                 </Box>
               )}
@@ -495,37 +522,37 @@ const CourseDetail = () => {
           <Card sx={{ position: 'sticky', top: 20 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                {course.isFree ? 'Free Course' : `$${course.price}`}
+                {course.isFree ? t('courseDetail.freeCourse') : `$${course.price}`}
               </Typography>
               
               <Box sx={{ mb: 3 }}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  What you'll learn:
+                  {t('courseDetail.whatYouWillLearn')}:
                 </Typography>
                 <List dense>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <CheckCircle color="success" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary="Build responsive websites" />
+                    <ListItemText primary={t('courseDetail.learn1')} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <CheckCircle color="success" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary="Master modern CSS techniques" />
+                    <ListItemText primary={t('courseDetail.learn2')} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <CheckCircle color="success" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary="JavaScript fundamentals" />
+                    <ListItemText primary={t('courseDetail.learn3')} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <CheckCircle color="success" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary="Deploy your projects" />
+                    <ListItemText primary={t('courseDetail.learn4')} />
                   </ListItem>
                 </List>
               </Box>
@@ -534,32 +561,32 @@ const CourseDetail = () => {
 
               <Box sx={{ mb: 3 }}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Course includes:
+                  {t('courseDetail.courseIncludes')}:
                 </Typography>
                 <List dense>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <PlayCircle color="primary" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`${sortedLessons.length} lessons`} />
+                    <ListItemText primary={`${sortedLessons.length} ${t('courseDetail.lessons')}`} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <Assignment color="secondary" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`${assignments.length} assignments`} />
+                    <ListItemText primary={`${assignments.length} ${t('courseDetail.assignments')}`} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <VideoLibrary color="success" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`${videos.length} videos`} />
+                    <ListItemText primary={`${videos.length} ${t('courseDetail.videos')}`} />
                   </ListItem>
                   <ListItem sx={{ px: 0 }}>
                     <ListItemIcon>
                       <Description color="info" sx={{ fontSize: 20 }} />
                     </ListItemIcon>
-                    <ListItemText primary={`${documents.length} documents`} />
+                    <ListItemText primary={`${documents.length} ${t('courseDetail.documents')}`} />
                   </ListItem>
                 </List>
               </Box>
@@ -574,7 +601,7 @@ const CourseDetail = () => {
                     size="large"
                     onClick={() => navigate(`/edit-course/${course.id}`)}
                   >
-                    Edit Course
+                    {t('courseDetail.editCourse')}
                   </Button>
                   <Button 
                     variant="outlined" 
@@ -582,13 +609,13 @@ const CourseDetail = () => {
                     size="large"
                     onClick={() => navigate(`/manage-materials/${course.id}`)}
                   >
-                    Manage Course Materials
+                    {t('courseDetail.manageCourseMaterials')}
                   </Button>
                 </Box>
               ) : enrolled ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
                   <Button variant="contained" fullWidth size="large">
-                    Continue Learning
+                    {t('dashboard.continueLearning')}
                   </Button>
                   <Button 
                     variant="outlined" 
@@ -596,7 +623,7 @@ const CourseDetail = () => {
                     size="large"
                     onClick={() => navigate(`/course-learning/${course.id}`)}
                   >
-                    Go to Course
+                    {t('courseDetail.goToCourse')}
                   </Button>
                 </Box>
               ) : (
@@ -607,7 +634,7 @@ const CourseDetail = () => {
                   onClick={handleEnroll}
                   disabled={enrollmentLoading}
                 >
-                  {enrollmentLoading ? 'Enrolling...' : (course.isFree ? 'Enroll for Free' : `Enroll for $${course.price}`)}
+                  {enrollmentLoading ? t('courseDetail.enrolling') : (course.isFree ? t('courseDetail.enrollForFree') : `${t('courseDetail.enrollFor')} $${course.price}`)}
                 </Button>
               )}
             </CardActions>

@@ -29,10 +29,15 @@ import {
   PhotoCamera
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
 const Profile = () => {
   const { user, login, updateUser } = useAuth();
+  const { language } = useLanguage();
+
+  const t = (key) => getTranslation(language, key);
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
@@ -44,6 +49,7 @@ const Profile = () => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success'); // 'success' or 'error'
   const [tabValue, setTabValue] = useState(0);
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
@@ -112,7 +118,8 @@ const Profile = () => {
       
       console.log('Profile update response:', response.data);
       
-      setMessage('Profile updated successfully!');
+      setMessage(t('profile.updateSuccess'));
+      setMessageType('success');
       setEditMode(false);
       setProfilePicture(null);
       setProfilePicturePreview(null);
@@ -123,7 +130,8 @@ const Profile = () => {
       updateUser(userResponse.data);
     } catch (error) {
       console.error('Profile update error:', error);
-      setMessage('Failed to update profile');
+      setMessage(t('profile.updateFailed'));
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -140,6 +148,7 @@ const Profile = () => {
     });
     setEditMode(false);
     setMessage('');
+    setMessageType('success');
     setProfilePicture(null);
     setProfilePicturePreview(null);
   };
@@ -156,7 +165,7 @@ const Profile = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
-        Profile
+        {t('profile.title')}
       </Typography>
 
       <Grid container spacing={3}>
@@ -199,7 +208,7 @@ const Profile = () => {
               </Typography>
 
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Member since {new Date(user?.createdAt).toLocaleDateString()}
+                {t('profile.memberSince')} {new Date(user?.createdAt).toLocaleDateString()}
               </Typography>
 
               <Button
@@ -208,7 +217,7 @@ const Profile = () => {
                 onClick={() => setEditMode(true)}
                 disabled={editMode}
               >
-                Edit Profile
+                {t('profile.editProfile')}
               </Button>
               
               {editMode && (
@@ -227,7 +236,7 @@ const Profile = () => {
                       startIcon={<PhotoCamera />}
                       size="small"
                     >
-                      Change Photo
+                      {t('profile.changePhoto')}
                     </Button>
                   </label>
                 </Box>
@@ -242,7 +251,7 @@ const Profile = () => {
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6">
-                  Personal Information
+                  {t('profile.personalInformation')}
                 </Typography>
                 {editMode && (
                   <Box sx={{ display: 'flex', gap: 1 }}>
@@ -253,7 +262,7 @@ const Profile = () => {
                       disabled={loading}
                       size="small"
                     >
-                      {loading ? <CircularProgress size={20} /> : 'Save'}
+                      {loading ? <CircularProgress size={20} /> : t('common.save')}
                     </Button>
                     <Button
                       variant="outlined"
@@ -261,14 +270,14 @@ const Profile = () => {
                       onClick={handleCancel}
                       size="small"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </Box>
                 )}
               </Box>
 
               {message && (
-                <Alert severity={message.includes('success') ? 'success' : 'error'} sx={{ mb: 2 }}>
+                <Alert severity={messageType} sx={{ mb: 2 }}>
                   {message}
                 </Alert>
               )}
@@ -277,7 +286,7 @@ const Profile = () => {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="First Name"
+                    label={t('profile.firstName')}
                     name="firstName"
                     value={profileData.firstName}
                     onChange={handleChange}
@@ -290,7 +299,7 @@ const Profile = () => {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Last Name"
+                    label={t('profile.lastName')}
                     name="lastName"
                     value={profileData.lastName}
                     onChange={handleChange}
@@ -300,7 +309,7 @@ const Profile = () => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Email"
+                    label={t('profile.email')}
                     name="email"
                     value={profileData.email}
                     onChange={handleChange}
@@ -313,7 +322,7 @@ const Profile = () => {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Phone Number"
+                    label={t('profile.phoneNumber')}
                     name="phoneNumber"
                     value={profileData.phoneNumber}
                     onChange={handleChange}
@@ -326,7 +335,7 @@ const Profile = () => {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Address"
+                    label={t('profile.address')}
                     name="address"
                     value={profileData.address}
                     onChange={handleChange}
@@ -339,14 +348,14 @@ const Profile = () => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Bio"
+                    label={t('profile.bio')}
                     name="bio"
                     value={profileData.bio}
                     onChange={handleChange}
                     disabled={!editMode}
                     multiline
                     rows={4}
-                    placeholder="Tell us about yourself..."
+                    placeholder={t('profile.bioPlaceholder')}
                   />
                 </Grid>
               </Grid>
@@ -357,7 +366,7 @@ const Profile = () => {
           <Card sx={{ mt: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Account Information
+                {t('profile.accountInformation')}
               </Typography>
               <Divider sx={{ mb: 2 }} />
               
@@ -366,7 +375,7 @@ const Profile = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <School sx={{ mr: 1, color: 'text.secondary' }} />
                     <Typography variant="body2" color="text.secondary">
-                      Role
+                      {t('profile.role')}
                     </Typography>
                   </Box>
                   <Typography variant="body1">
@@ -377,18 +386,18 @@ const Profile = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Email sx={{ mr: 1, color: 'text.secondary' }} />
                     <Typography variant="body2" color="text.secondary">
-                      Email Verified
+                      {t('profile.emailVerified')}
                     </Typography>
                   </Box>
                   <Typography variant="body1" color="success.main">
-                    ✓ Verified
+                    ✓ {t('profile.verified')}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Person sx={{ mr: 1, color: 'text.secondary' }} />
                     <Typography variant="body2" color="text.secondary">
-                      Member Since
+                      {t('profile.memberSinceLabel')}
                     </Typography>
                   </Box>
                   <Typography variant="body1">
@@ -399,11 +408,11 @@ const Profile = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <School sx={{ mr: 1, color: 'text.secondary' }} />
                     <Typography variant="body2" color="text.secondary">
-                      Status
+                      {t('profile.status')}
                     </Typography>
                   </Box>
                   <Typography variant="body1" color="success.main">
-                    ✓ Active
+                    ✓ {t('profile.active')}
                   </Typography>
                 </Grid>
               </Grid>

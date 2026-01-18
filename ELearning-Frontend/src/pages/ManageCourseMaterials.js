@@ -52,12 +52,25 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
 const ManageCourseMaterials = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { language } = useLanguage();
+
+  const t = (key) => getTranslation(language, key);
+
+  // Helper function to get auth headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return token ? {
+      Authorization: `Bearer ${token}`
+    } : {};
+  };
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -95,13 +108,15 @@ const ManageCourseMaterials = () => {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
+      const headers = getAuthHeaders();
+      
       const [courseRes, lessonsRes, assignmentsRes, videosRes, documentsRes, quizzesRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/courses/${id}`),
-        axios.get(`http://localhost:5000/api/lessons/course/${id}`),
-        axios.get(`http://localhost:5000/api/assignments/course/${id}`),
-        axios.get(`http://localhost:5000/api/videos/course/${id}`),
-        axios.get(`http://localhost:5000/api/documents/course/${id}`),
-        axios.get(`http://localhost:5000/api/multiplechoices/course/${id}`)
+        axios.get(`http://localhost:5000/api/courses/${id}`, { headers }),
+        axios.get(`http://localhost:5000/api/lessons/course/${id}`, { headers }),
+        axios.get(`http://localhost:5000/api/assignments/course/${id}`, { headers }),
+        axios.get(`http://localhost:5000/api/videos/course/${id}`, { headers }),
+        axios.get(`http://localhost:5000/api/documents/course/${id}`, { headers }),
+        axios.get(`http://localhost:5000/api/multiplechoices/course/${id}`, { headers })
       ]);
 
       setCourse(courseRes.data);
@@ -128,7 +143,15 @@ const ManageCourseMaterials = () => {
       }
     } catch (error) {
       console.error('Error fetching course data:', error);
-      setMessage('Error loading course materials');
+      if (error.response?.status === 401) {
+        // Token expired or invalid - redirect to login
+        setMessage('Your session has expired. Please log in again.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        setMessage('Error loading course materials');
+      }
     } finally {
       setLoading(false);
     }
@@ -159,7 +182,7 @@ const ManageCourseMaterials = () => {
       setMessage('Certificate settings saved successfully');
       
       // Refresh course data
-      const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`);
+      const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`, { headers: getAuthHeaders() });
       setCourse(courseRes.data);
       if (courseRes.data.certificateSignature) {
         const signatureUrl = courseRes.data.certificateSignature.startsWith('http') 
@@ -199,7 +222,7 @@ const ManageCourseMaterials = () => {
       setMessage('Certificate instructor names saved successfully');
       
       // Refresh course data
-      const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`);
+      const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`, { headers: getAuthHeaders() });
       setCourse(courseRes.data);
       setCertificateInstructorName1(courseRes.data.certificateInstructorName1 || 'Thiha Naing');
       setCertificateInstructorName2(courseRes.data.certificateInstructorName2 || 'Nay Myo Khine');
@@ -434,7 +457,7 @@ const ManageCourseMaterials = () => {
   };
 
   const handleDelete = async (item, type) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    if (!window.confirm(t('manageMaterials.confirmDelete'))) return;
     
     try {
       // Map quiz type to multiplechoice for API endpoint
@@ -444,7 +467,7 @@ const ManageCourseMaterials = () => {
                      apiType === 'video' ? 'videos' : 
                      apiType === 'document' ? 'documents' :
                      apiType === 'multiplechoice' ? 'multiplechoices' : 'documents';
-      await axios.delete(`http://localhost:5000/api/${endpoint}/${item.id}`);
+      await axios.delete(`http://localhost:5000/api/${endpoint}/${item.id}`, { headers: getAuthHeaders() });
       setMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
       fetchCourseData();
     } catch (error) {
@@ -537,7 +560,7 @@ const ManageCourseMaterials = () => {
           }
           
           updates.push(
-            axios.put(`http://localhost:5000/api/${endpoint}/${material.id}`, updateData)
+            axios.put(`http://localhost:5000/api/${endpoint}/${material.id}`, updateData, { headers: getAuthHeaders() })
           );
         }
       }
@@ -843,11 +866,12 @@ const ManageCourseMaterials = () => {
         }
       }
       
+      const headers = getAuthHeaders();
       if (editingItem) {
-        await axios.put(`http://localhost:5000/api/${endpoint}/${editingItem.id}`, requestData);
+        await axios.put(`http://localhost:5000/api/${endpoint}/${editingItem.id}`, requestData, { headers });
         setMessage(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} updated successfully`);
       } else {
-        await axios.post(`http://localhost:5000/api/${endpoint}`, requestData);
+        await axios.post(`http://localhost:5000/api/${endpoint}`, requestData, { headers });
         setMessage(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} created successfully`);
       }
       
@@ -942,7 +966,7 @@ const ManageCourseMaterials = () => {
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
         <CircularProgress />
         <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading course materials...
+          {t('manageMaterials.loading')}
         </Typography>
       </Container>
     );
@@ -954,10 +978,10 @@ const ManageCourseMaterials = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" gutterBottom>
-            {course?.title || 'Manage Course Materials'}
+            {course?.title || t('manageMaterials.title')}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            by {course?.instructor?.firstName} {course?.instructor?.lastName}
+            {t('courses.by')} {course?.instructor?.firstName} {course?.instructor?.lastName}
           </Typography>
         </Box>
       </Box>
@@ -972,40 +996,40 @@ const ManageCourseMaterials = () => {
         />
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Course Overview
+            {t('manageMaterials.courseOverview')}
           </Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            {course?.description || 'Manage all course materials including lessons, assignments, quizzes, videos, and documents.'}
+            {course?.description || t('manageMaterials.defaultDescription')}
           </Typography>
           
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <Chip 
               icon={<MenuBook />} 
-              label={`${lessons.length} Lessons`} 
+              label={`${lessons.length} ${t('courseDetail.lessons')}`} 
               color="primary" 
               variant="outlined" 
             />
             <Chip 
               icon={<Assignment />} 
-              label={`${assignments.length} Assignments`} 
+              label={`${assignments.length} ${t('courseDetail.assignments')}`} 
               color="secondary" 
               variant="outlined" 
             />
             <Chip 
               icon={<VideoLibrary />} 
-              label={`${videos.length} Videos`} 
+              label={`${videos.length} ${t('courseDetail.videos')}`} 
               color="success" 
               variant="outlined" 
             />
             <Chip 
               icon={<Description />} 
-              label={`${documents.length} Documents`} 
+              label={`${documents.length} ${t('courseDetail.documents')}`} 
               color="warning" 
               variant="outlined" 
             />
             <Chip 
               icon={<Quiz />} 
-              label={`${quizzes.length} Quizzes`} 
+              label={`${quizzes.length} ${t('courseDetail.quizzes')}`} 
               color="info" 
               variant="outlined" 
             />
@@ -1028,37 +1052,37 @@ const ManageCourseMaterials = () => {
             scrollButtons="auto"
           >
             <Tab 
-              label={`All (${generalMaterials.length})`} 
+              label={`${t('courseLearning.all')} (${generalMaterials.length})`} 
               icon={<MenuBook />} 
               iconPosition="start"
             />
             <Tab 
-              label={`Lessons (${lessons.length})`} 
+              label={`${t('courseDetail.lessons')} (${lessons.length})`} 
               icon={<MenuBook />} 
               iconPosition="start"
             />
             <Tab 
-              label={`Assignments (${assignments.length})`} 
+              label={`${t('courseDetail.assignments')} (${assignments.length})`} 
               icon={<Assignment />} 
               iconPosition="start"
             />
             <Tab 
-              label={`Videos (${videos.length})`} 
+              label={`${t('courseDetail.videos')} (${videos.length})`} 
               icon={<VideoLibrary />} 
               iconPosition="start"
             />
             <Tab 
-              label={`Documents (${documents.length})`} 
+              label={`${t('courseDetail.documents')} (${documents.length})`} 
               icon={<Description />} 
               iconPosition="start"
             />
             <Tab 
-              label={`Quizzes (${quizzes.length})`} 
+              label={`${t('courseDetail.quizzes')} (${quizzes.length})`} 
               icon={<Quiz />} 
               iconPosition="start"
             />
             <Tab 
-              label="Certification" 
+              label={t('courseLearning.certification')} 
               icon={<WorkspacePremium />} 
               iconPosition="start"
             />
@@ -1070,10 +1094,10 @@ const ManageCourseMaterials = () => {
           {tabValue === 0 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                All Course Materials
+                {t('manageMaterials.allCourseMaterials')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Manage all course materials in one place. Drag items using the handle (☰) to reorder them. Click on any item to edit or delete it.
+                {t('manageMaterials.allMaterialsDescription')}
               </Typography>
               <List>
                 {generalMaterials.map((material, index) => (
@@ -1135,24 +1159,24 @@ const ManageCourseMaterials = () => {
                       secondary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Typography variant="body2" color="text.secondary">
-                            Order: {material.orderIndex || material.order || 0}
+                            {t('manageMaterials.order')}: {material.orderIndex || material.order || 0}
                           </Typography>
                           {material.duration && (
                             <Typography variant="body2" color="text.secondary">
                               {material.type === 'video' 
                                 ? `${Math.floor(material.duration / 60)}:${(material.duration % 60).toString().padStart(2, '0')}`
-                                : `${material.duration} min`
+                                : `${material.duration} ${t('courseDetail.minutes')}`
                               }
                             </Typography>
                           )}
                           {material.dueDate && (
                             <Typography variant="body2" color="text.secondary">
-                              Due: {new Date(material.dueDate).toLocaleDateString()}
+                              {t('courseDetail.due')}: {new Date(material.dueDate).toLocaleDateString()}
                             </Typography>
                           )}
                           {material.totalQuestions && (
                             <Typography variant="body2" color="text.secondary">
-                              {material.totalQuestions} questions
+                              {material.totalQuestions} {t('manageMaterials.questions')}
                             </Typography>
                           )}
                           {material.fileSize && (
@@ -1187,8 +1211,8 @@ const ManageCourseMaterials = () => {
                 {generalMaterials.length === 0 && (
                   <ListItem>
                     <ListItemText
-                      primary="No materials available"
-                      secondary="Start by adding lessons, assignments, quizzes, videos, or documents to your course."
+                      primary={t('manageMaterials.noMaterialsAvailable')}
+                      secondary={t('manageMaterials.startAddingMaterials')}
                     />
                   </ListItem>
                 )}
@@ -1200,13 +1224,13 @@ const ManageCourseMaterials = () => {
           {tabValue === 1 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Course Lessons</Typography>
+                <Typography variant="h6">{t('manageMaterials.courseLessons')}</Typography>
                 <Button
                   variant="contained"
                   startIcon={<Add />}
                   onClick={() => handleAddNew('lesson')}
                 >
-                  Add Lesson
+                  {t('manageMaterials.addLesson')}
                 </Button>
               </Box>
               <List>
@@ -1220,13 +1244,13 @@ const ManageCourseMaterials = () => {
                             {lesson.content || lesson.description}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Chip label={`${lesson.duration} min`} size="small" />
+                            <Chip label={`${lesson.duration} ${t('courseDetail.minutes')}`} size="small" />
                             <Chip 
-                              label={lesson.isFree ? 'Free' : 'Premium'} 
+                              label={lesson.isFree ? t('courses.free') : t('manageMaterials.premium')} 
                               size="small" 
                               color={lesson.isFree ? 'success' : 'primary'}
                             />
-                            <Chip label={`Order: ${lesson.order}`} size="small" variant="outlined" />
+                            <Chip label={`${t('manageMaterials.order')}: ${lesson.order}`} size="small" variant="outlined" />
                             <Chip label={lesson.type} size="small" color="secondary" />
                           </Box>
                         </Box>
@@ -1247,7 +1271,7 @@ const ManageCourseMaterials = () => {
                 ))}
                 {lessons.length === 0 && (
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                    No lessons added yet. Click "Add Lesson" to get started.
+                    {t('manageMaterials.noLessonsAdded')}
                   </Typography>
                 )}
               </List>
@@ -1258,13 +1282,13 @@ const ManageCourseMaterials = () => {
           {tabValue === 2 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Course Assignments</Typography>
+                <Typography variant="h6">{t('manageMaterials.courseAssignments')}</Typography>
                 <Button
                   variant="contained"
                   startIcon={<Add />}
                   onClick={() => handleAddNew('assignment')}
                 >
-                  Add Assignment
+                  {t('manageMaterials.addAssignment')}
                 </Button>
               </Box>
               <List>
@@ -1278,14 +1302,14 @@ const ManageCourseMaterials = () => {
                             {assignment.description}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Chip label={`${assignment.maxPoints} points`} size="small" />
+                            <Chip label={`${assignment.maxPoints} ${t('manageMaterials.points')}`} size="small" />
                             <Chip 
-                              label={`Due: ${new Date(assignment.dueDate).toLocaleDateString()}`} 
+                              label={`${t('courseDetail.due')}: ${new Date(assignment.dueDate).toLocaleDateString()}`} 
                               size="small" 
                               color="warning"
                             />
                             <Chip label={assignment.type} size="small" color="secondary" />
-                            <Chip label={`${assignment.submissions?.length || 0} submissions`} size="small" variant="outlined" />
+                            <Chip label={`${assignment.submissions?.length || 0} ${t('manageMaterials.submissions')}`} size="small" variant="outlined" />
                           </Box>
                         </Box>
                       }
@@ -1305,7 +1329,7 @@ const ManageCourseMaterials = () => {
                 ))}
                 {assignments.length === 0 && (
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                    No assignments added yet. Click "Add Assignment" to get started.
+                    {t('manageMaterials.noAssignmentsAdded')}
                   </Typography>
                 )}
               </List>
@@ -1317,13 +1341,13 @@ const ManageCourseMaterials = () => {
           {tabValue === 3 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Course Videos</Typography>
+                <Typography variant="h6">{t('manageMaterials.courseVideos')}</Typography>
                 <Button
                   variant="contained"
                   startIcon={<Add />}
                   onClick={() => handleAddNew('video')}
                 >
-                  Add Video
+                  {t('manageMaterials.addVideo')}
                 </Button>
               </Box>
               <List>
@@ -1340,8 +1364,8 @@ const ManageCourseMaterials = () => {
                             <Chip label={`${Math.floor(video.duration / 60)}:${(video.duration % 60).toString().padStart(2, '0')}`} size="small" />
                             <Chip label={video.videoType} size="small" />
                             <Chip label={video.quality} size="small" />
-                            {video.isFree && <Chip label="Free" size="small" color="success" />}
-                            {!video.isPublished && <Chip label="Draft" size="small" color="warning" />}
+                            {video.isFree && <Chip label={t('courses.free')} size="small" color="success" />}
+                            {!video.isPublished && <Chip label={t('manageMaterials.draft')} size="small" color="warning" />}
                           </Box>
                         </Box>
                       }
@@ -1361,7 +1385,7 @@ const ManageCourseMaterials = () => {
                 ))}
                 {videos.length === 0 && (
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                    No videos added yet. Click "Add Video" to get started.
+                    {t('manageMaterials.noVideosAdded')}
                   </Typography>
                 )}
               </List>
@@ -1372,13 +1396,13 @@ const ManageCourseMaterials = () => {
           {tabValue === 4 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Course Documents</Typography>
+                <Typography variant="h6">{t('manageMaterials.courseDocuments')}</Typography>
                 <Button
                   variant="contained"
                   startIcon={<Add />}
                   onClick={() => handleAddNew('document')}
                 >
-                  Add Document
+                  {t('manageMaterials.addDocument')}
                 </Button>
               </Box>
               <List>
@@ -1395,9 +1419,9 @@ const ManageCourseMaterials = () => {
                             <Chip label={document.documentType} size="small" />
                             <Chip label={document.fileFormat} size="small" />
                             <Chip label={`${(document.fileSize / 1024 / 1024).toFixed(1)} MB`} size="small" />
-                            {document.pageCount > 0 && <Chip label={`${document.pageCount} pages`} size="small" />}
-                            {document.isFree && <Chip label="Free" size="small" color="success" />}
-                            {!document.isPublished && <Chip label="Draft" size="small" color="warning" />}
+                            {document.pageCount > 0 && <Chip label={`${document.pageCount} ${t('courseDetail.pages')}`} size="small" />}
+                            {document.isFree && <Chip label={t('courses.free')} size="small" color="success" />}
+                            {!document.isPublished && <Chip label={t('manageMaterials.draft')} size="small" color="warning" />}
                           </Box>
                         </Box>
                       }
@@ -1417,7 +1441,7 @@ const ManageCourseMaterials = () => {
                 ))}
                 {documents.length === 0 && (
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                    No documents added yet. Click "Add Document" to get started.
+                    {t('manageMaterials.noDocumentsAdded')}
                   </Typography>
                 )}
               </List>
@@ -1428,13 +1452,13 @@ const ManageCourseMaterials = () => {
           {tabValue === 5 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Course Quizzes</Typography>
+                <Typography variant="h6">{t('manageMaterials.courseQuizzes')}</Typography>
                 <Button
                   variant="contained"
                   startIcon={<Add />}
                   onClick={() => handleAddNew('quiz')}
                 >
-                  Add Quiz
+                  {t('manageMaterials.addQuiz')}
                 </Button>
               </Box>
               <List>
@@ -1448,11 +1472,11 @@ const ManageCourseMaterials = () => {
                             {quiz.description}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Chip label={`${quiz.questions?.length || 0} questions`} size="small" />
-                            <Chip label={`${quiz.totalPoints} points`} size="small" />
-                            {quiz.timeLimit && <Chip label={`${quiz.timeLimit} min`} size="small" />}
-                            {quiz.isFree && <Chip label="Free" size="small" color="success" />}
-                            {!quiz.isPublished && <Chip label="Draft" size="small" color="warning" />}
+                            <Chip label={`${quiz.questions?.length || 0} ${t('manageMaterials.questions')}`} size="small" />
+                            <Chip label={`${quiz.totalPoints} ${t('manageMaterials.points')}`} size="small" />
+                            {quiz.timeLimit && <Chip label={`${quiz.timeLimit} ${t('courseDetail.minutes')}`} size="small" />}
+                            {quiz.isFree && <Chip label={t('courses.free')} size="small" color="success" />}
+                            {!quiz.isPublished && <Chip label={t('manageMaterials.draft')} size="small" color="warning" />}
                           </Box>
                         </Box>
                       }
@@ -1472,7 +1496,7 @@ const ManageCourseMaterials = () => {
                 ))}
                 {quizzes.length === 0 && (
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                    No quizzes added yet. Click "Add Quiz" to get started.
+                    {t('manageMaterials.noQuizzesAdded')}
                   </Typography>
                 )}
               </List>
@@ -1483,50 +1507,50 @@ const ManageCourseMaterials = () => {
           {tabValue === 6 && (
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Certificate Settings</Typography>
+                <Typography variant="h6">{t('manageMaterials.certificateSettings')}</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure the certificate settings for this course. Three instructor names will appear on certificates issued to students. All instructors will use the same signature image.
+                {t('manageMaterials.certificateSettingsDescription')}
               </Typography>
 
               <Card sx={{ mb: 3 }}>
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-                    Instructor Names for Certificate
+                    {t('manageMaterials.instructorNamesForCertificate')}
                   </Typography>
                   
                   <TextField
                     fullWidth
-                    label="Instructor 1 Name"
+                    label={t('manageMaterials.instructor1Name')}
                     value={certificateInstructorName1}
                     onChange={(e) => setCertificateInstructorName1(e.target.value)}
                     placeholder="Thiha Naing"
                     sx={{ mb: 2 }}
-                    helperText="First instructor name that will appear on the certificate"
+                    helperText={t('manageMaterials.instructor1Helper')}
                   />
 
                   <TextField
                     fullWidth
-                    label="Instructor 2 Name"
+                    label={t('manageMaterials.instructor2Name')}
                     value={certificateInstructorName2}
                     onChange={(e) => setCertificateInstructorName2(e.target.value)}
                     placeholder="Nay Myo Khine"
                     sx={{ mb: 2 }}
-                    helperText="Second instructor name that will appear on the certificate"
+                    helperText={t('manageMaterials.instructor2Helper')}
                   />
 
                   <TextField
                     fullWidth
-                    label="Instructor 3 Name"
+                    label={t('manageMaterials.instructor3Name')}
                     value={certificateInstructorName3}
                     onChange={(e) => setCertificateInstructorName3(e.target.value)}
                     placeholder="Min Thiha"
                     sx={{ mb: 3 }}
-                    helperText="Third instructor name that will appear on the certificate"
+                    helperText={t('manageMaterials.instructor3Helper')}
                   />
 
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Note: All instructors will use the same signature image (Thiha_Sign.png) which is automatically included on the certificate.
+                    {t('manageMaterials.certificateNote')}
                   </Typography>
 
                   <Button
@@ -1535,7 +1559,7 @@ const ManageCourseMaterials = () => {
                     disabled={savingCertificate}
                     startIcon={savingCertificate ? <CircularProgress size={20} /> : null}
                   >
-                    {savingCertificate ? 'Saving...' : 'Save Certificate Instructor Names'}
+                    {savingCertificate ? t('common.loading') : t('manageMaterials.saveCertificateInstructors')}
                   </Button>
                 </CardContent>
               </Card>
@@ -1547,20 +1571,20 @@ const ManageCourseMaterials = () => {
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editingItem ? `Edit ${dialogType}` : `Add New ${dialogType}`}
+          {editingItem ? `${t('manageMaterials.edit')} ${t(`manageMaterials.${dialogType}`)}` : `${t('manageMaterials.addNew')} ${t(`manageMaterials.${dialogType}`)}`}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <TextField
               fullWidth
-              label="Title"
+              label={t('common.title')}
               value={formData.title || ''}
               onChange={(e) => handleFormChange('title', e.target.value)}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="Description"
+              label={t('common.description')}
               value={formData.description || ''}
               onChange={(e) => handleFormChange('description', e.target.value)}
               multiline
@@ -2174,13 +2198,13 @@ const ManageCourseMaterials = () => {
                 </Box>
                 
                 <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
-                  Quiz Questions
+                  {t('manageMaterials.quizQuestions')}
                 </Typography>
                 
                 {(formData.questions || []).map((question, index) => (
                   <Card key={index} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0' }}>
                     <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                      Question {index + 1}
+                      {t('manageMaterials.question')} {index + 1}
                     </Typography>
                     
                     <TextField
@@ -2284,7 +2308,7 @@ const ManageCourseMaterials = () => {
                         }}
                         disabled={(formData.questions || []).length <= 1}
                       >
-                        Remove
+                        {t('manageMaterials.remove')}
                       </Button>
                     </Box>
                     
@@ -2325,21 +2349,21 @@ const ManageCourseMaterials = () => {
                   }}
                   sx={{ mb: 2 }}
                 >
-                  Add Question
+                  {t('manageMaterials.addQuestion')}
                 </Button>
               </>
             )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <Button onClick={() => setOpenDialog(false)}>{t('common.cancel')}</Button>
           <Button 
             onClick={handleSave} 
             variant="contained" 
             disabled={saving}
             startIcon={saving ? <CircularProgress size={20} /> : null}
           >
-            {saving ? 'Saving...' : (editingItem ? 'Update' : 'Create')}
+            {saving ? t('common.loading') : (editingItem ? t('common.save') : t('manageMaterials.create'))}
           </Button>
         </DialogActions>
       </Dialog>

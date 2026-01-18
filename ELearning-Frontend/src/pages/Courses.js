@@ -27,10 +27,13 @@ import {
   Schedule
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
 const Courses = () => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +41,8 @@ const Courses = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  const t = (key) => getTranslation(language, key);
 
   useEffect(() => {
     fetchCourses();
@@ -95,7 +100,7 @@ const Courses = () => {
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
         <CircularProgress />
         <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading courses...
+          {t('common.loading')}
         </Typography>
       </Container>
     );
@@ -105,10 +110,10 @@ const Courses = () => {
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" gutterBottom>
-          All Courses
+          {t('courses.allCourses')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Discover amazing courses and start your learning journey
+          {t('courses.discover')}
         </Typography>
       </Box>
 
@@ -118,7 +123,7 @@ const Courses = () => {
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="Search courses..."
+              placeholder={t('courses.searchPlaceholder')}
               value={searchTerm}
               onChange={handleSearch}
               InputProps={{
@@ -128,34 +133,34 @@ const Courses = () => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Level</InputLabel>
+              <InputLabel>{t('courses.level')}</InputLabel>
               <Select
                 value={levelFilter}
                 onChange={handleLevelFilter}
-                label="Level"
+                label={t('courses.level')}
               >
-                <MenuItem value="">All Levels</MenuItem>
-                <MenuItem value="Beginner">Beginner</MenuItem>
-                <MenuItem value="Intermediate">Intermediate</MenuItem>
-                <MenuItem value="Advanced">Advanced</MenuItem>
+                <MenuItem value="">{t('courses.allLevels')}</MenuItem>
+                <MenuItem value="Beginner">{t('courses.beginner')}</MenuItem>
+                <MenuItem value="Intermediate">{t('courses.intermediate')}</MenuItem>
+                <MenuItem value="Advanced">{t('courses.advanced')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
+              <InputLabel>{t('courses.category')}</InputLabel>
               <Select
                 value={categoryFilter}
                 onChange={handleCategoryFilter}
-                label="Category"
+                label={t('courses.category')}
               >
-                <MenuItem value="">All Categories</MenuItem>
-                <MenuItem value="Programming">Programming</MenuItem>
-                <MenuItem value="Web Development">Web Development</MenuItem>
-                <MenuItem value="Data Science">Data Science</MenuItem>
-                <MenuItem value="Design">Design</MenuItem>
-                <MenuItem value="Business">Business</MenuItem>
-                <MenuItem value="Marketing">Marketing</MenuItem>
+                <MenuItem value="">{t('courses.allCategories')}</MenuItem>
+                <MenuItem value="Programming">{t('courses.programming')}</MenuItem>
+                <MenuItem value="Web Development">{t('courses.webDevelopment')}</MenuItem>
+                <MenuItem value="Data Science">{t('courses.dataScience')}</MenuItem>
+                <MenuItem value="Design">{t('courses.design')}</MenuItem>
+                <MenuItem value="Business">{t('courses.business')}</MenuItem>
+                <MenuItem value="Marketing">{t('courses.marketing')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -171,7 +176,7 @@ const Courses = () => {
                 setPage(1);
               }}
             >
-              Clear Filters
+              {t('courses.clearFilters')}
             </Button>
           </Grid>
         </Grid>
@@ -206,7 +211,7 @@ const Courses = () => {
                 </Typography>
                 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  by {course.instructor?.firstName} {course.instructor?.lastName}
+                  {t('courses.by')} {course.instructor?.firstName} {course.instructor?.lastName}
                 </Typography>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -220,7 +225,7 @@ const Courses = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <People sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
                     <Typography variant="body2" color="text.secondary">
-                      1,250 students
+                      1,250 {t('courses.students')}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -242,7 +247,7 @@ const Courses = () => {
                   fullWidth
                   onClick={() => navigate(`/courses/${course.id}`)}
                 >
-                  View Course
+                  {t('courses.viewCourse')}
                 </Button>
               </CardActions>
             </Card>
@@ -265,10 +270,10 @@ const Courses = () => {
       {courses.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h5" color="text.secondary">
-            No courses found
+            {t('courses.noCoursesFound')}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-            Try adjusting your search or filter criteria
+            {t('courses.tryAdjustingFilters')}
           </Typography>
         </Box>
       )}

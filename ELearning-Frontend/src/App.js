@@ -15,6 +15,7 @@ import EditCourse from './pages/EditCourse';
 import ManageCourseMaterials from './pages/ManageCourseMaterials';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -29,10 +30,11 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Navbar />
-        <Box component="main" sx={{ flexGrow: 1 }}>
+    <LanguageProvider>
+      <AuthProvider>
+        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+          <Navbar />
+          <Box component="main" sx={{ flexGrow: 1 }}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -96,9 +98,10 @@ function App() {
               } 
             />
           </Routes>
+          </Box>
         </Box>
-      </Box>
-    </AuthProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

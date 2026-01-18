@@ -18,12 +18,16 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enUS } from 'date-fns/locale';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { getTranslation } from '../../utils/translations';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { language } = useLanguage();
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -37,6 +41,8 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const t = (key) => getTranslation(language, key);
 
   const handleChange = (e) => {
     setFormData({
@@ -59,19 +65,19 @@ const Register = () => {
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('register.passwordsDoNotMatch'));
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError(t('register.passwordTooShort'));
       setLoading(false);
       return;
     }
 
     if (!formData.dateOfBirth) {
-      setError('Please select your date of birth');
+      setError(t('register.selectDateOfBirth'));
       setLoading(false);
       return;
     }
@@ -92,14 +98,17 @@ const Register = () => {
     if (result.success) {
       navigate('/dashboard');
     } else {
-      setError(result.message);
+      setError(result.message || t('register.registrationFailed'));
     }
     
     setLoading(false);
   };
 
+  // Set locale for DatePicker (date-fns doesn't have Myanmar locale, so we'll use enUS for both)
+  const dateLocale = language === 'mm' ? enUS : enUS;
+
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={dateLocale}>
       <Container component="main" maxWidth="md">
         <Box
           sx={{
@@ -118,10 +127,10 @@ const Register = () => {
               }}
             >
               <Typography component="h1" variant="h4" gutterBottom>
-                Create Account
+                {t('register.title')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Join our learning community today!
+                {t('register.subtitle')}
               </Typography>
 
               {error && (
@@ -137,7 +146,7 @@ const Register = () => {
                       required
                       fullWidth
                       id="firstName"
-                      label="First Name"
+                      label={t('register.firstName')}
                       name="firstName"
                       autoComplete="given-name"
                       value={formData.firstName}
@@ -149,7 +158,7 @@ const Register = () => {
                       required
                       fullWidth
                       id="lastName"
-                      label="Last Name"
+                      label={t('register.lastName')}
                       name="lastName"
                       autoComplete="family-name"
                       value={formData.lastName}
@@ -161,7 +170,7 @@ const Register = () => {
                       required
                       fullWidth
                       id="email"
-                      label="Email Address"
+                      label={t('register.emailAddress')}
                       name="email"
                       autoComplete="email"
                       type="email"
@@ -174,7 +183,7 @@ const Register = () => {
                       required
                       fullWidth
                       name="password"
-                      label="Password"
+                      label={t('register.password')}
                       type="password"
                       id="password"
                       autoComplete="new-password"
@@ -187,7 +196,7 @@ const Register = () => {
                       required
                       fullWidth
                       name="confirmPassword"
-                      label="Confirm Password"
+                      label={t('register.confirmPassword')}
                       type="password"
                       id="confirmPassword"
                       value={formData.confirmPassword}
@@ -196,7 +205,7 @@ const Register = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <DatePicker
-                      label="Date of Birth"
+                      label={t('register.dateOfBirth')}
                       value={formData.dateOfBirth}
                       onChange={handleDateChange}
                       renderInput={(params) => <TextField {...params} fullWidth required />}
@@ -204,18 +213,18 @@ const Register = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth>
-                      <InputLabel id="role-label">Role</InputLabel>
+                      <InputLabel id="role-label">{t('register.role')}</InputLabel>
                       <Select
                         labelId="role-label"
                         id="role"
                         name="role"
                         value={formData.role}
-                        label="Role"
+                        label={t('register.role')}
                         onChange={handleChange}
                       >
-                        <MenuItem value="Student">Student</MenuItem>
-                        <MenuItem value="Instructor">Instructor</MenuItem>
-                        <MenuItem value="Admin">Admin</MenuItem>
+                        <MenuItem value="Student">{t('register.student')}</MenuItem>
+                        <MenuItem value="Instructor">{t('register.instructor')}</MenuItem>
+                        <MenuItem value="Admin">{t('register.admin')}</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
@@ -223,7 +232,7 @@ const Register = () => {
                     <TextField
                       fullWidth
                       name="phoneNumber"
-                      label="Phone Number"
+                      label={t('register.phoneNumber')}
                       id="phoneNumber"
                       value={formData.phoneNumber}
                       onChange={handleChange}
@@ -233,7 +242,7 @@ const Register = () => {
                     <TextField
                       fullWidth
                       name="address"
-                      label="Address"
+                      label={t('register.address')}
                       id="address"
                       multiline
                       rows={2}
@@ -250,11 +259,11 @@ const Register = () => {
                   sx={{ mt: 3, mb: 2 }}
                   disabled={loading}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Sign Up'}
+                  {loading ? <CircularProgress size={24} /> : t('register.signUp')}
                 </Button>
                 <Box textAlign="center">
                   <Link component={RouterLink} to="/login" variant="body2">
-                    Already have an account? Sign In
+                    {t('register.alreadyHaveAccount')} {t('register.signIn')}
                   </Link>
                 </Box>
               </Box>

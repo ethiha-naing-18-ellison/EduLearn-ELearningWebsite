@@ -19,11 +19,15 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
 const CreateCourse = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const t = (key) => getTranslation(language, key);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -79,12 +83,12 @@ const CreateCourse = () => {
 
       const response = await axios.post('http://localhost:5000/api/courses', courseData);
       
-      setSuccess('Course created successfully!');
+      setSuccess(t('createCourse.courseCreatedSuccess'));
       setTimeout(() => {
         navigate(`/courses/${response.data.id}`);
       }, 2000);
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to create course');
+      setError(error.response?.data?.message || t('createCourse.failedToCreate'));
     } finally {
       setLoading(false);
     }
@@ -94,10 +98,10 @@ const CreateCourse = () => {
     <Container maxWidth="md">
       <Box sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" gutterBottom>
-          Create New Course
+          {t('createCourse.title')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Share your knowledge with the world
+          {t('createCourse.subtitle')}
         </Typography>
       </Box>
 
@@ -119,7 +123,7 @@ const CreateCourse = () => {
             {/* Basic Information */}
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
-                Basic Information
+                {t('createCourse.basicInformation')}
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
@@ -129,10 +133,10 @@ const CreateCourse = () => {
                 required
                 fullWidth
                 name="title"
-                label="Course Title"
+                label={t('createCourse.courseTitle')}
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="e.g., Complete Web Development Bootcamp"
+                placeholder={t('createCourse.courseTitlePlaceholder')}
               />
             </Grid>
 
@@ -141,12 +145,12 @@ const CreateCourse = () => {
                 required
                 fullWidth
                 name="description"
-                label="Course Description"
+                label={t('createCourse.courseDescription')}
                 multiline
                 rows={4}
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Describe what students will learn in this course..."
+                placeholder={t('createCourse.courseDescriptionPlaceholder')}
               />
             </Grid>
 
@@ -154,23 +158,23 @@ const CreateCourse = () => {
               <TextField
                 fullWidth
                 name="thumbnail"
-                label="Thumbnail URL"
+                label={t('createCourse.thumbnailURL')}
                 value={formData.thumbnail}
                 onChange={handleChange}
-                placeholder="https://example.com/image.jpg"
+                placeholder={t('createCourse.thumbnailURLPlaceholder')}
               />
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
+                <InputLabel>{t('createCourse.category')}</InputLabel>
                 <Select
                   name="categoryId"
                   value={formData.categoryId}
                   onChange={handleChange}
-                  label="Category"
+                  label={t('createCourse.category')}
                 >
-                  <MenuItem value="">Select Category</MenuItem>
+                  <MenuItem value="">{t('createCourse.selectCategory')}</MenuItem>
                   {categories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
                       {category.name}
@@ -183,23 +187,23 @@ const CreateCourse = () => {
             {/* Course Details */}
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                Course Details
+                {t('createCourse.courseDetails')}
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Level</InputLabel>
+                <InputLabel>{t('createCourse.level')}</InputLabel>
                 <Select
                   name="level"
                   value={formData.level}
                   onChange={handleChange}
-                  label="Level"
+                  label={t('createCourse.level')}
                 >
-                  <MenuItem value="Beginner">Beginner</MenuItem>
-                  <MenuItem value="Intermediate">Intermediate</MenuItem>
-                  <MenuItem value="Advanced">Advanced</MenuItem>
+                  <MenuItem value="Beginner">{t('courses.beginner')}</MenuItem>
+                  <MenuItem value="Intermediate">{t('courses.intermediate')}</MenuItem>
+                  <MenuItem value="Advanced">{t('courses.advanced')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -209,7 +213,7 @@ const CreateCourse = () => {
                 required
                 fullWidth
                 name="duration"
-                label="Duration (hours)"
+                label={t('createCourse.duration')}
                 type="number"
                 value={formData.duration}
                 onChange={handleChange}
@@ -221,7 +225,7 @@ const CreateCourse = () => {
               <TextField
                 fullWidth
                 name="price"
-                label="Price ($)"
+                label={t('createCourse.price')}
                 type="number"
                 value={formData.price}
                 onChange={handleChange}
@@ -239,14 +243,14 @@ const CreateCourse = () => {
                     name="isFree"
                   />
                 }
-                label="Free Course"
+                label={t('createCourse.freeCourse')}
               />
             </Grid>
 
             {/* Learning Content */}
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                Learning Content
+                {t('createCourse.learningContent')}
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
@@ -255,12 +259,12 @@ const CreateCourse = () => {
               <TextField
                 fullWidth
                 name="prerequisites"
-                label="Prerequisites"
+                label={t('createCourse.prerequisites')}
                 multiline
                 rows={3}
                 value={formData.prerequisites}
                 onChange={handleChange}
-                placeholder="What should students know before taking this course?"
+                placeholder={t('createCourse.prerequisitesPlaceholder')}
               />
             </Grid>
 
@@ -268,12 +272,12 @@ const CreateCourse = () => {
               <TextField
                 fullWidth
                 name="learningOutcomes"
-                label="Learning Outcomes"
+                label={t('createCourse.learningOutcomes')}
                 multiline
                 rows={3}
                 value={formData.learningOutcomes}
                 onChange={handleChange}
-                placeholder="What will students be able to do after completing this course?"
+                placeholder={t('createCourse.learningOutcomesPlaceholder')}
               />
             </Grid>
 
@@ -287,14 +291,14 @@ const CreateCourse = () => {
                   disabled={loading}
                   sx={{ flexGrow: 1 }}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Create Course'}
+                  {loading ? <CircularProgress size={24} /> : t('createCourse.createCourse')}
                 </Button>
                 <Button
                   variant="outlined"
                   size="large"
                   onClick={() => navigate('/dashboard')}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </Box>
             </Grid>

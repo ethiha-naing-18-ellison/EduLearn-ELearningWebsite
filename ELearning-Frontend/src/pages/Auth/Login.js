@@ -12,16 +12,21 @@ import {
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { getTranslation } from '../../utils/translations';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { language } = useLanguage();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const t = (key) => getTranslation(language, key);
 
   const handleChange = (e) => {
     setFormData({
@@ -40,7 +45,7 @@ const Login = () => {
     if (result.success) {
       navigate('/dashboard');
     } else {
-      setError(result.message);
+      setError(result.message || t('login.loginFailed'));
     }
     
     setLoading(false);
@@ -65,10 +70,10 @@ const Login = () => {
             }}
           >
             <Typography component="h1" variant="h4" gutterBottom>
-              Sign In
+              {t('login.title')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Welcome back! Please sign in to your account.
+              {t('login.subtitle')}
             </Typography>
 
             {error && (
@@ -83,7 +88,7 @@ const Login = () => {
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label={t('login.emailAddress')}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -95,7 +100,7 @@ const Login = () => {
                 required
                 fullWidth
                 name="password"
-                label="Password"
+                label={t('login.password')}
                 type="password"
                 id="password"
                 autoComplete="current-password"
@@ -109,11 +114,11 @@ const Login = () => {
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Sign In'}
+                {loading ? <CircularProgress size={24} /> : t('login.signIn')}
               </Button>
               <Box textAlign="center">
                 <Link component={RouterLink} to="/register" variant="body2">
-                  Don't have an account? Sign Up
+                  {t('login.dontHaveAccount')} {t('login.signUp')}
                 </Link>
               </Box>
             </Box>

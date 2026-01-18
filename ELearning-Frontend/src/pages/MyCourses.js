@@ -34,11 +34,16 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
 const MyCourses = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { language } = useLanguage();
+
+  const t = (key) => getTranslation(language, key);
   const [courses, setCourses] = useState([]);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,13 +144,13 @@ const MyCourses = () => {
   };
 
   const handleDeleteCourse = async (courseId) => {
-    if (window.confirm('Are you sure you want to delete this course?')) {
+    if (window.confirm(t('myCourses.confirmDelete'))) {
       try {
         await axios.delete(`http://localhost:5000/api/courses/${courseId}`);
         fetchMyCourses(); // Refresh the list
       } catch (error) {
         console.error('Error deleting course:', error);
-        alert('Error deleting course. Please try again.');
+        alert(t('myCourses.deleteError'));
       }
     }
   };
@@ -164,7 +169,7 @@ const MyCourses = () => {
       <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
         <CircularProgress />
         <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading your courses...
+          {t('myCourses.loading')}
         </Typography>
       </Container>
     );
@@ -174,12 +179,12 @@ const MyCourses = () => {
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" gutterBottom>
-          My Courses
+          {t('myCourses.title')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
           {isStudent 
-            ? "View all the courses you've enrolled in"
-            : "Manage and view all the courses you've created"}
+            ? t('myCourses.subtitleStudent')
+            : t('myCourses.subtitleInstructor')}
         </Typography>
       </Box>
 
@@ -190,7 +195,7 @@ const MyCourses = () => {
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              placeholder="Search my courses..."
+              placeholder={t('myCourses.searchPlaceholder')}
               value={searchTerm}
               onChange={handleSearch}
               InputProps={{
@@ -200,34 +205,34 @@ const MyCourses = () => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Level</InputLabel>
+              <InputLabel>{t('courses.level')}</InputLabel>
               <Select
                 value={levelFilter}
                 onChange={handleLevelFilter}
-                label="Level"
+                label={t('courses.level')}
               >
-                <MenuItem value="">All Levels</MenuItem>
-                <MenuItem value="Beginner">Beginner</MenuItem>
-                <MenuItem value="Intermediate">Intermediate</MenuItem>
-                <MenuItem value="Advanced">Advanced</MenuItem>
+                <MenuItem value="">{t('courses.allLevels')}</MenuItem>
+                <MenuItem value="Beginner">{t('courses.beginner')}</MenuItem>
+                <MenuItem value="Intermediate">{t('courses.intermediate')}</MenuItem>
+                <MenuItem value="Advanced">{t('courses.advanced')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
+              <InputLabel>{t('courses.category')}</InputLabel>
               <Select
                 value={categoryFilter}
                 onChange={handleCategoryFilter}
-                label="Category"
+                label={t('courses.category')}
               >
-                <MenuItem value="">All Categories</MenuItem>
-                <MenuItem value="Programming">Programming</MenuItem>
-                <MenuItem value="Web Development">Web Development</MenuItem>
-                <MenuItem value="Data Science">Data Science</MenuItem>
-                <MenuItem value="Design">Design</MenuItem>
-                <MenuItem value="Business">Business</MenuItem>
-                <MenuItem value="Marketing">Marketing</MenuItem>
+                <MenuItem value="">{t('courses.allCategories')}</MenuItem>
+                <MenuItem value="Programming">{t('courses.programming')}</MenuItem>
+                <MenuItem value="Web Development">{t('courses.webDevelopment')}</MenuItem>
+                <MenuItem value="Data Science">{t('courses.dataScience')}</MenuItem>
+                <MenuItem value="Design">{t('courses.design')}</MenuItem>
+                <MenuItem value="Business">{t('courses.business')}</MenuItem>
+                <MenuItem value="Marketing">{t('courses.marketing')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -243,7 +248,7 @@ const MyCourses = () => {
                 setPage(1);
               }}
             >
-              Clear Filters
+              {t('courses.clearFilters')}
             </Button>
           </Grid>
         </Grid>
@@ -279,7 +284,7 @@ const MyCourses = () => {
                 </Typography>
                 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  by {course.instructor?.firstName} {course.instructor?.lastName}
+                  {t('courses.by')} {course.instructor?.firstName} {course.instructor?.lastName}
                 </Typography>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -293,7 +298,7 @@ const MyCourses = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <People sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
                     <Typography variant="body2" color="text.secondary">
-                      1,250 students
+                      1,250 {t('courses.students')}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -310,33 +315,33 @@ const MyCourses = () => {
               </CardContent>
               
               <CardActions sx={{ p: 2, flexDirection: 'column', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  startIcon={<Visibility />}
-                  onClick={() => navigate(`/courses/${course.id}`)}
-                >
-                  View Course
-                </Button>
-                <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
                   <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<Edit />}
-                    onClick={() => handleEditCourse(course.id)}
-                    sx={{ flex: 1 }}
+                    variant="contained"
+                    fullWidth
+                    startIcon={<Visibility />}
+                    onClick={() => navigate(`/courses/${course.id}`)}
                   >
-                    Edit
+                    {t('courses.viewCourse')}
                   </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<FilterList />}
-                    onClick={() => handleManageMaterials(course.id)}
-                    sx={{ flex: 1 }}
-                  >
-                    Materials
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Edit />}
+                      onClick={() => handleEditCourse(course.id)}
+                      sx={{ flex: 1 }}
+                    >
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<FilterList />}
+                      onClick={() => handleManageMaterials(course.id)}
+                      sx={{ flex: 1 }}
+                    >
+                      {t('myCourses.materials')}
+                    </Button>
                   <IconButton
                     color="error"
                     size="small"
@@ -390,7 +395,7 @@ const MyCourses = () => {
                       size="small" 
                     />
                     <Typography variant="h6" color="primary">
-                      {enrollment.course?.isFree ? 'Free' : `$${enrollment.course?.price}`}
+                      {enrollment.course?.isFree ? t('courses.free') : `$${enrollment.course?.price}`}
                     </Typography>
                   </Box>
                   
@@ -436,7 +441,7 @@ const MyCourses = () => {
                     startIcon={<Visibility />}
                     onClick={() => navigate(`/courses/${enrollment.course?.id}`)}
                   >
-                    View Course
+                    {t('courses.viewCourse')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -444,7 +449,7 @@ const MyCourses = () => {
                     startIcon={<MenuBook />}
                     onClick={() => navigate(`/course-learning/${enrollment.course?.id}`)}
                   >
-                    Go to Course
+                    {t('myCourses.goToCourse')}
                   </Button>
                 </CardActions>
               </Card>
@@ -470,17 +475,17 @@ const MyCourses = () => {
       {isInstructor && courses.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h5" color="text.secondary">
-            No courses found
+            {t('myCourses.noCoursesFound')}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-            You haven't created any courses yet. Start by creating your first course!
+            {t('myCourses.noCreatedCourses')}
           </Typography>
           <Button
             variant="contained"
             sx={{ mt: 2 }}
             onClick={() => navigate('/create-course')}
           >
-            Create Your First Course
+            {t('myCourses.createFirstCourse')}
           </Button>
         </Box>
       )}
@@ -509,12 +514,12 @@ const MyCourses = () => {
         return (hasNoEnrolledCourses || hasNoFilteredResults) && !loading && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h5" color="text.secondary">
-            {hasNoEnrolledCourses ? 'No enrolled courses' : 'No courses match your filters'}
+            {hasNoEnrolledCourses ? t('myCourses.noEnrolledCourses') : t('myCourses.noFilteredCourses')}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
             {hasNoEnrolledCourses 
-              ? "You haven't enrolled in any courses yet. Browse available courses to get started!"
-              : "Try adjusting your search or filter criteria."}
+              ? t('myCourses.noEnrolledCoursesMessage')
+              : t('courses.tryAdjustingFilters')}
           </Typography>
           <Button
             variant="contained"
@@ -529,7 +534,7 @@ const MyCourses = () => {
               }
             }}
           >
-            {hasNoEnrolledCourses ? 'Browse Courses' : 'Clear Filters'}
+            {hasNoEnrolledCourses ? t('myCourses.browseCourses') : t('courses.clearFilters')}
           </Button>
         </Box>
         );
