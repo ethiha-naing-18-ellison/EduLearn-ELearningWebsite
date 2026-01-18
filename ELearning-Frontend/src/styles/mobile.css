@@ -1,0 +1,162 @@
+/* Mobile-Specific Optimizations */
+
+/* Touch-friendly targets */
+@media (max-width: 768px) {
+  /* Ensure minimum touch target size (44x44px) */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve tap highlight */
+  * {
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2);
+  }
+
+  /* Prevent text size adjustment on iOS */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Smooth scrolling */
+  html {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Prevent pull-to-refresh on iOS */
+  body {
+    overscroll-behavior-y: contain;
+  }
+
+  /* Optimize animations for mobile */
+  * {
+    will-change: auto;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Optimize spacing for tablets */
+  .MuiContainer-root {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Fix iOS input zoom */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Fix iOS safe area */
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Android specific optimizations */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  /* Improve rendering on Android */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 896px) and (orientation: landscape) {
+  /* Reduce padding in landscape */
+  .MuiContainer-root {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Optimize images and icons */
+  img {
+    image-rendering: -webkit-optimize-contrast;
+  }
+}
+
+/* Prevent horizontal scroll */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Mobile menu optimizations */
+.MuiDrawer-paper {
+  touch-action: pan-y;
+}
+
+/* Improve button touch feedback */
+button:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+/* Card touch feedback */
+.MuiCard-root:active {
+  transform: scale(0.98);
+}
+
+/* Optimize grid spacing on mobile */
+@media (max-width: 600px) {
+  .MuiGrid-container {
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+  
+  .MuiGrid-item {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* Improve form inputs on mobile */
+@media (max-width: 768px) {
+  .MuiTextField-root {
+    width: 100%;
+  }
+  
+  .MuiButton-root {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+/* Safe area for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+}

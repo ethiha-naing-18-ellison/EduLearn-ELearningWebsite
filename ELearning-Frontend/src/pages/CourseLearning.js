@@ -60,6 +60,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 import jsPDF from 'jspdf';
@@ -70,6 +71,7 @@ const CourseLearning = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { language } = useLanguage();
+  const { showSuccess, showError, showWarning } = useNotification();
   const t = (key) => getTranslation(language, key);
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
@@ -164,7 +166,7 @@ const CourseLearning = () => {
     try {
       const certificateElement = document.getElementById('certificate-card');
       if (!certificateElement) {
-        alert(t('courseLearning.certificateNotFound'));
+        showError(t('courseLearning.certificateNotFound'));
         return;
       }
 
@@ -262,9 +264,10 @@ const CourseLearning = () => {
       
       // Remove loading alert
       document.body.removeChild(loadingAlert);
+      showSuccess(t('courseLearning.pdfGeneratedSuccessfully') || 'PDF generated successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert(t('courseLearning.errorGeneratingPDF'));
+      showError(t('courseLearning.errorGeneratingPDF'));
     }
   };
   
@@ -491,7 +494,7 @@ const CourseLearning = () => {
       // Handle 401 errors (token expired or invalid)
       if (error.response?.status === 401) {
         logout();
-        alert(t('courseLearning.sessionExpired'));
+        showWarning(t('courseLearning.sessionExpired'), { title: 'Session Expired' });
         navigate('/login');
       }
     }
@@ -757,11 +760,16 @@ const CourseLearning = () => {
       // Refresh quiz pass status for this quiz
       await fetchQuizPassStatus([quizId]);
 
-      alert(`${t('courseLearning.quizSubmitted')} ${t('courseLearning.score')}: ${result.score}/${result.totalPoints} (${result.percentage}%)${result.isPassed ? ` - ${t('courseLearning.youPassed')} ✅` : ` - ${t('courseLearning.needHigherScore')}`}`);
+      const message = `${t('courseLearning.quizSubmitted')} ${t('courseLearning.score')}: ${result.score}/${result.totalPoints} (${result.percentage}%)${result.isPassed ? ` - ${t('courseLearning.youPassed')} ✅` : ` - ${t('courseLearning.needHigherScore')}`}`;
+      if (result.isPassed) {
+        showSuccess(message, { title: t('courseLearning.quizPassed') || 'Quiz Passed!' });
+      } else {
+        showWarning(message, { title: t('courseLearning.quizFailed') || 'Quiz Failed' });
+      }
     } catch (error) {
       console.error('Error submitting quiz:', error);
       const errorMessage = error.response?.data?.message || t('courseLearning.errorSubmittingQuiz');
-      alert(errorMessage);
+      showError(errorMessage, { title: t('courseLearning.error') || 'Error' });
     }
   };
 
@@ -769,7 +777,9 @@ const CourseLearning = () => {
   const handleQuizReset = async (quizId) => {
     // Check if user can retake
     if (!quizCanRetake[quizId]) {
-      alert(`${t('courseLearning.maxAttemptsReached')} (${materialContent?.maxAttempts || 3}). ${t('courseLearning.cannotRetake')}`);
+      showWarning(`${t('courseLearning.maxAttemptsReached')} (${materialContent?.maxAttempts || 3}). ${t('courseLearning.cannotRetake')}`, { 
+        title: t('courseLearning.maxAttemptsReached') || 'Max Attempts Reached' 
+      });
       return;
     }
 
@@ -1654,7 +1664,7 @@ const CourseLearning = () => {
                           letterSpacing: '0.5px'
                         }}
                       >
-                        {t('courseLearning.certifyText')}
+                        This is to certify that
                       </Typography>
                       
                       {/* Student Name */}
@@ -1708,7 +1718,7 @@ const CourseLearning = () => {
                           letterSpacing: '0.3px'
                         }}
                       >
-                        {t('courseLearning.completionText')}
+                        has successfully completed all requirements and demonstrated proficiency in
                       </Typography>
                       
                       {/* Decorative element before course name */}
@@ -1905,7 +1915,7 @@ const CourseLearning = () => {
                             textTransform: 'uppercase'
                           }}
                         >
-                          {t('courseLearning.date')}
+                          Date
                         </Typography>
                         <Typography 
                           variant="body1" 

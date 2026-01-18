@@ -53,6 +53,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
@@ -61,6 +62,7 @@ const ManageCourseMaterials = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { language } = useLanguage();
+  const { showConfirm, showSuccess, showError } = useNotification();
 
   const t = (key) => getTranslation(language, key);
 
@@ -150,7 +152,9 @@ const ManageCourseMaterials = () => {
           window.location.href = '/login';
         }, 2000);
       } else {
-        setMessage('Error loading course materials');
+        showError('Error loading course materials', {
+          title: 'Error'
+        });
       }
     } finally {
       setLoading(false);
@@ -179,7 +183,9 @@ const ManageCourseMaterials = () => {
         }
       );
 
-      setMessage('Certificate settings saved successfully');
+      showSuccess('Certificate settings saved successfully', {
+        title: t('manageMaterials.certificateSaved') || 'Certificate Saved'
+      });
       
       // Refresh course data
       const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`, { headers: getAuthHeaders() });
@@ -193,7 +199,9 @@ const ManageCourseMaterials = () => {
     } catch (error) {
       console.error('Error saving certificate settings:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error saving certificate settings';
-      setMessage(errorMessage);
+      showError(errorMessage, {
+        title: t('manageMaterials.certificateError') || 'Certificate Error'
+      });
     } finally {
       setSavingCertificate(false);
     }
@@ -219,7 +227,9 @@ const ManageCourseMaterials = () => {
         }
       );
 
-      setMessage('Certificate instructor names saved successfully');
+      showSuccess('Certificate instructor names saved successfully', {
+        title: t('manageMaterials.certificateSaved') || 'Certificate Saved'
+      });
       
       // Refresh course data
       const courseRes = await axios.get(`http://localhost:5000/api/courses/${id}`, { headers: getAuthHeaders() });
@@ -230,7 +240,9 @@ const ManageCourseMaterials = () => {
     } catch (error) {
       console.error('Error saving certificate instructors:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error saving certificate instructors';
-      setMessage(errorMessage);
+      showError(errorMessage, {
+        title: t('manageMaterials.certificateError') || 'Certificate Error'
+      });
     } finally {
       setSavingCertificate(false);
     }
@@ -457,25 +469,37 @@ const ManageCourseMaterials = () => {
   };
 
   const handleDelete = async (item, type) => {
-    if (!window.confirm(t('manageMaterials.confirmDelete'))) return;
-    
-    try {
-      // Map quiz type to multiplechoice for API endpoint
-      const apiType = type === 'quiz' ? 'multiplechoice' : type;
-      const endpoint = apiType === 'lesson' ? 'lessons' : 
-                     apiType === 'assignment' ? 'assignments' : 
-                     apiType === 'video' ? 'videos' : 
-                     apiType === 'document' ? 'documents' :
-                     apiType === 'multiplechoice' ? 'multiplechoices' : 'documents';
-      await axios.delete(`http://localhost:5000/api/${endpoint}/${item.id}`, { headers: getAuthHeaders() });
-      setMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
-      fetchCourseData();
-    } catch (error) {
-      console.error(`Error deleting ${type}:`, error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || `Error deleting ${type}`;
-      setMessage(errorMessage);
-      console.error('Full error response:', error.response?.data);
-    }
+    showConfirm(
+      t('manageMaterials.confirmDelete'),
+      async () => {
+        try {
+          // Map quiz type to multiplechoice for API endpoint
+          const apiType = type === 'quiz' ? 'multiplechoice' : type;
+          const endpoint = apiType === 'lesson' ? 'lessons' : 
+                         apiType === 'assignment' ? 'assignments' : 
+                         apiType === 'video' ? 'videos' : 
+                         apiType === 'document' ? 'documents' :
+                         apiType === 'multiplechoice' ? 'multiplechoices' : 'documents';
+          await axios.delete(`http://localhost:5000/api/${endpoint}/${item.id}`, { headers: getAuthHeaders() });
+          showSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`, {
+            title: t('manageMaterials.deleteSuccess') || 'Deleted Successfully'
+          });
+          fetchCourseData();
+        } catch (error) {
+          console.error(`Error deleting ${type}:`, error);
+          const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || `Error deleting ${type}`;
+          showError(errorMessage, {
+            title: t('manageMaterials.deleteError') || 'Delete Failed'
+          });
+          console.error('Full error response:', error.response?.data);
+        }
+      },
+      null,
+      {
+        title: t('manageMaterials.confirmDeleteTitle') || 'Confirm Delete',
+        type: 'warning'
+      }
+    );
   };
 
 
@@ -567,13 +591,17 @@ const ManageCourseMaterials = () => {
       
       if (updates.length > 0) {
         await Promise.all(updates);
-        setMessage('Order updated successfully');
+        showSuccess('Order updated successfully', {
+          title: t('manageMaterials.orderUpdated') || 'Order Updated'
+        });
         fetchCourseData();
       }
     } catch (error) {
       console.error('Error reordering material:', error);
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error reordering material';
-      setMessage(errorMessage);
+      showError(errorMessage, {
+        title: t('manageMaterials.orderError') || 'Order Update Failed'
+      });
     } finally {
       setDraggedIndex(null);
     }
@@ -615,7 +643,9 @@ const ManageCourseMaterials = () => {
           }
         });
         
-        setMessage('Video uploaded successfully');
+        showSuccess('Video uploaded successfully', {
+          title: t('manageMaterials.uploadSuccess') || 'Upload Successful'
+        });
         setOpenDialog(false);
         fetchCourseData();
         return; // Exit early since we handled the upload
@@ -648,7 +678,9 @@ const ManageCourseMaterials = () => {
           }
         });
         
-        setMessage('Document uploaded successfully');
+        showSuccess('Document uploaded successfully', {
+          title: t('manageMaterials.uploadSuccess') || 'Upload Successful'
+        });
         setOpenDialog(false);
         fetchCourseData();
         return; // Exit early since we handled the upload
@@ -676,11 +708,15 @@ const ManageCourseMaterials = () => {
         
         // Validate required fields
         if (!requestData.title.trim()) {
-          setMessage('Title is required for lessons');
+          showError('Title is required for lessons', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         if (!requestData.content.trim()) {
-          setMessage('Content is required for lessons');
+          showError('Content is required for lessons', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
       } else if (dialogType === 'assignment') {
@@ -716,11 +752,15 @@ const ManageCourseMaterials = () => {
         
         // Validate required fields
         if (!requestData.title.trim()) {
-          setMessage('Title is required for assignments');
+          showError('Title is required for assignments', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         if (!requestData.description.trim()) {
-          setMessage('Description is required for assignments');
+          showError('Description is required for assignments', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
       } else if (dialogType === 'video') {
@@ -744,15 +784,21 @@ const ManageCourseMaterials = () => {
         
         // Validate required fields
         if (!requestData.title.trim()) {
-          setMessage('Title is required for videos');
+          showError('Title is required for videos', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         if (!requestData.description.trim()) {
-          setMessage('Description is required for videos');
+          showError('Description is required for videos', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         if (!requestData.videoUrl && !requestData.videoFile) {
-          setMessage('Either video URL or video file is required');
+          showError('Either video URL or video file is required', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
       } else if (dialogType === 'document') {
@@ -780,15 +826,21 @@ const ManageCourseMaterials = () => {
         
         // Validate required fields
         if (!requestData.title.trim()) {
-          setMessage('Title is required for documents');
+          showError('Title is required for documents', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         if (!requestData.description.trim()) {
-          setMessage('Description is required for documents');
+          showError('Description is required for documents', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         if (!requestData.documentUrl && !requestData.documentFile) {
-          setMessage('Either document URL or document file is required');
+          showError('Either document URL or document file is required', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
       } else if (dialogType === 'quiz') {
@@ -836,11 +888,15 @@ const ManageCourseMaterials = () => {
         
         // Validate required fields
         if (!requestData.title.trim()) {
-          setMessage('Title is required for quiz');
+          showError('Title is required for quiz', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         if (!requestData.questions || requestData.questions.length === 0) {
-          setMessage('At least one question is required');
+          showError('At least one question is required', {
+            title: t('manageMaterials.validationError') || 'Validation Error'
+          });
           return;
         }
         
@@ -848,19 +904,27 @@ const ManageCourseMaterials = () => {
         for (let i = 0; i < requestData.questions.length; i++) {
           const question = requestData.questions[i];
           if (!question.questionText.trim()) {
-            setMessage(`Question ${i + 1}: Question text is required`);
+            showError(`Question ${i + 1}: Question text is required`, {
+              title: t('manageMaterials.validationError') || 'Validation Error'
+            });
             return;
           }
           if (!question.optionA.trim()) {
-            setMessage(`Question ${i + 1}: Option A is required`);
+            showError(`Question ${i + 1}: Option A is required`, {
+              title: t('manageMaterials.validationError') || 'Validation Error'
+            });
             return;
           }
           if (!question.optionB.trim()) {
-            setMessage(`Question ${i + 1}: Option B is required`);
+            showError(`Question ${i + 1}: Option B is required`, {
+              title: t('manageMaterials.validationError') || 'Validation Error'
+            });
             return;
           }
           if (!['A', 'B', 'C', 'D'].includes(question.correctAnswer)) {
-            setMessage(`Question ${i + 1}: Correct answer must be A, B, C, or D`);
+            showError(`Question ${i + 1}: Correct answer must be A, B, C, or D`, {
+              title: t('manageMaterials.validationError') || 'Validation Error'
+            });
             return;
           }
         }
@@ -869,10 +933,14 @@ const ManageCourseMaterials = () => {
       const headers = getAuthHeaders();
       if (editingItem) {
         await axios.put(`http://localhost:5000/api/${endpoint}/${editingItem.id}`, requestData, { headers });
-        setMessage(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} updated successfully`);
+        showSuccess(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} updated successfully`, {
+          title: t('manageMaterials.updateSuccess') || 'Updated Successfully'
+        });
       } else {
         await axios.post(`http://localhost:5000/api/${endpoint}`, requestData, { headers });
-        setMessage(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} created successfully`);
+        showSuccess(`${dialogType.charAt(0).toUpperCase() + dialogType.slice(1)} created successfully`, {
+          title: t('manageMaterials.createSuccess') || 'Created Successfully'
+        });
       }
       
       setOpenDialog(false);
@@ -908,7 +976,9 @@ const ManageCourseMaterials = () => {
         errorMessage += `: ${error.message}`;
       }
       
-      setMessage(errorMessage);
+      showError(errorMessage, {
+        title: t('manageMaterials.saveError') || 'Save Failed'
+      });
     } finally {
       setSaving(false);
     }

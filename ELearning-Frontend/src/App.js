@@ -16,6 +16,7 @@ import ManageCourseMaterials from './pages/ManageCourseMaterials';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -32,10 +33,11 @@ function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <Navbar />
-          <Box component="main" sx={{ flexGrow: 1 }}>
-          <Routes>
+        <NotificationProvider>
+          <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <Navbar />
+            <Box component="main" sx={{ flexGrow: 1 }}>
+            <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -97,9 +99,10 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-          </Routes>
+            </Routes>
+            </Box>
           </Box>
-        </Box>
+        </NotificationProvider>
       </AuthProvider>
     </LanguageProvider>
   );

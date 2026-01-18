@@ -298,6 +298,8 @@
     "quizSubmitted": "Quiz submitted!",
     "score": "Score",
     "youPassed": "You passed!",
+    "quizPassed": "Quiz Passed!",
+    "quizFailed": "Quiz Failed",
     "needHigherScore": "You need to score higher. Keep practicing!",
     "errorSubmittingQuiz": "Error submitting quiz. Please try again.",
     "certificateNotFound": "Certificate not found. Please refresh the page.",

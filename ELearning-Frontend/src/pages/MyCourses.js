@@ -35,6 +35,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
@@ -42,6 +43,7 @@ const MyCourses = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { language } = useLanguage();
+  const { showConfirm, showSuccess, showError } = useNotification();
 
   const t = (key) => getTranslation(language, key);
   const [courses, setCourses] = useState([]);
@@ -144,15 +146,28 @@ const MyCourses = () => {
   };
 
   const handleDeleteCourse = async (courseId) => {
-    if (window.confirm(t('myCourses.confirmDelete'))) {
-      try {
-        await axios.delete(`http://localhost:5000/api/courses/${courseId}`);
-        fetchMyCourses(); // Refresh the list
-      } catch (error) {
-        console.error('Error deleting course:', error);
-        alert(t('myCourses.deleteError'));
+    showConfirm(
+      t('myCourses.confirmDelete'),
+      async () => {
+        try {
+          await axios.delete(`http://localhost:5000/api/courses/${courseId}`);
+          showSuccess(t('myCourses.deleteSuccess') || 'Course deleted successfully', {
+            title: t('myCourses.deleteSuccessTitle') || 'Deleted Successfully'
+          });
+          fetchMyCourses(); // Refresh the list
+        } catch (error) {
+          console.error('Error deleting course:', error);
+          showError(t('myCourses.deleteError'), {
+            title: t('myCourses.deleteErrorTitle') || 'Delete Failed'
+          });
+        }
+      },
+      null,
+      {
+        title: t('myCourses.confirmDeleteTitle') || 'Confirm Delete',
+        type: 'warning'
       }
-    }
+    );
   };
 
   const getLevelColor = (level) => {

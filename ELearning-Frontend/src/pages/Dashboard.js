@@ -18,7 +18,9 @@ import {
   LinearProgress,
   Tabs,
   Tab,
-  CircularProgress
+  CircularProgress,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   School,
@@ -42,6 +44,8 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const t = (key) => getTranslation(language, key);
   const [stats, setStats] = useState({
@@ -360,90 +364,446 @@ const Dashboard = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          {getGreeting()}, {user.firstName}! 👋
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Chip 
-            label={user.role} 
-            color={getRoleColor(user.role)} 
-            size="small" 
-          />
-          <Typography variant="body2" color="text.secondary">
-            {t('dashboard.welcome')}
-          </Typography>
+    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', position: 'relative' }}>
+      {/* Animated Background Elements */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.05) 0%, transparent 50%)',
+          animation: 'float 20s ease-in-out infinite',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      
+      <Container maxWidth="lg" sx={{ py: { xs: 3, sm: 4, md: 6 }, px: { xs: 2, sm: 3 }, position: 'relative', zIndex: 1 }}>
+        <Box 
+          sx={{ 
+            mb: { xs: 4, md: 6 },
+            p: { xs: 2.5, sm: 3, md: 4 },
+            borderRadius: { xs: 3, md: 4 },
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 30%, #ec4899 60%, #6366f1 100%)',
+            backgroundSize: '400% 400%',
+            animation: 'gradient 10s ease infinite',
+            color: 'white',
+            boxShadow: '0 15px 35px rgba(99, 102, 241, 0.3)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%)',
+              animation: 'pulse 4s ease-in-out infinite',
+              pointerEvents: 'none',
+            },
+          }}
+        >
+          <Box sx={{ position: 'relative', zIndex: 1 }}>
+            <Typography 
+              variant="h3" 
+              gutterBottom
+              sx={{
+                fontWeight: 900,
+                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.25rem', lg: '2.75rem' },
+                mb: { xs: 1.5, md: 2 },
+                background: 'linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.95) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                animation: 'slideInDown 0.8s ease-out',
+                lineHeight: { xs: 1.3, md: 1.2 },
+              }}
+            >
+              {getGreeting()}, {user.firstName}! 👋
+            </Typography>
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 1.5, md: 2 }, 
+                flexWrap: 'wrap',
+                animation: 'fadeIn 1s ease-out 0.3s both',
+              }}
+            >
+              <Chip 
+                label={user.role} 
+                icon={<WorkspacePremium sx={{ fontSize: { xs: 18, md: 20 } }} />}
+                sx={{ 
+                  backgroundColor: 'rgba(255,255,255,0.25)',
+                  color: 'white',
+                  fontWeight: 700,
+                  border: '2px solid rgba(255,255,255,0.4)',
+                  fontSize: { xs: '0.85rem', md: '0.95rem' },
+                  py: { xs: 2, md: 2.5 },
+                  height: { xs: 32, md: 40 },
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.35)',
+                    transform: 'scale(1.05)',
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+                size="medium" 
+              />
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  opacity: 0.98,
+                  fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1.1rem' },
+                  fontWeight: 500,
+                }}
+              >
+                {t('dashboard.welcome')}
+              </Typography>
+            </Box>
+          </Box>
         </Box>
-      </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
         {/* Stats Cards - Different for Students vs Instructors */}
         {user.role === 'Student' ? (
           <>
             {/* Student Dashboard Stats */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <School color="primary" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.courses')}</Typography>
+            <Grid 
+              item 
+              xs={12} 
+              sm={6} 
+              md={3}
+              sx={{
+                animation: 'scaleIn 0.6s ease-out 0.1s both',
+              }}
+            >
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    opacity: 0,
+                    transition: 'opacity 0.4s ease',
+                  },
+                  '&:hover': {
+                    transform: 'translateY(-12px) scale(1.05)',
+                    boxShadow: '0 25px 50px rgba(99, 102, 241, 0.4), 0 0 60px rgba(99, 102, 241, 0.2)',
+                    '&::before': {
+                      opacity: 1,
+                    },
+                    '& .stat-icon': {
+                      transform: 'scale(1.2) rotate(5deg)',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                    },
+                  },
+                }}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box 
+                      className="stat-icon"
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 3, 
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.4s ease',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                      }}
+                    >
+                      <School sx={{ fontSize: 32 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="primary">
+                  <Typography 
+                    variant="h2" 
+                    sx={{ 
+                      fontWeight: 900, 
+                      mb: { xs: 0.5, md: 1 },
+                      fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem', lg: '2.75rem' },
+                      textShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                      lineHeight: 1.2,
+                    }}
+                  >
                     {stats.enrolledCourses}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.95, 
+                      fontWeight: 600,
+                      fontSize: { xs: '0.85rem', md: '0.95rem' },
+                    }}
+                  >
                     {t('dashboard.stats.enrolled')}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <PlayArrow color="info" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.inProgress')}</Typography>
+            <Grid 
+              item 
+              xs={12} 
+              sm={6} 
+              md={3}
+              sx={{
+                animation: 'scaleIn 0.6s ease-out 0.2s both',
+              }}
+            >
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
+                  color: 'white',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    opacity: 0,
+                    transition: 'opacity 0.4s ease',
+                  },
+                  '&:hover': {
+                    transform: 'translateY(-12px) scale(1.05)',
+                    boxShadow: '0 25px 50px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2)',
+                    '&::before': {
+                      opacity: 1,
+                    },
+                    '& .stat-icon': {
+                      transform: 'scale(1.2) rotate(5deg)',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                    },
+                  },
+                }}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box 
+                      className="stat-icon"
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 3, 
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.4s ease',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                      }}
+                    >
+                      <PlayArrow sx={{ fontSize: 32 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="info.main">
+                  <Typography 
+                    variant="h2" 
+                    sx={{ 
+                      fontWeight: 900, 
+                      mb: { xs: 0.5, md: 1 },
+                      fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem', lg: '2.75rem' },
+                      textShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                      lineHeight: 1.2,
+                    }}
+                  >
                     {stats.inProgressCourses}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.95, 
+                      fontWeight: 600,
+                      fontSize: { xs: '0.85rem', md: '0.95rem' },
+                    }}
+                  >
                     {t('dashboard.stats.activeCourses')}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Assignment color="success" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.completed')}</Typography>
+            <Grid 
+              item 
+              xs={12} 
+              sm={6} 
+              md={3}
+              sx={{
+                animation: 'scaleIn 0.6s ease-out 0.3s both',
+              }}
+            >
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+                  color: 'white',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    opacity: 0,
+                    transition: 'opacity 0.4s ease',
+                  },
+                  '&:hover': {
+                    transform: 'translateY(-12px) scale(1.05)',
+                    boxShadow: '0 25px 50px rgba(16, 185, 129, 0.4), 0 0 60px rgba(16, 185, 129, 0.2)',
+                    '&::before': {
+                      opacity: 1,
+                    },
+                    '& .stat-icon': {
+                      transform: 'scale(1.2) rotate(5deg)',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                    },
+                  },
+                }}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box 
+                      className="stat-icon"
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 3, 
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.4s ease',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                      }}
+                    >
+                      <Assignment sx={{ fontSize: 32 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="success.main">
+                  <Typography 
+                    variant="h2" 
+                    sx={{ 
+                      fontWeight: 900, 
+                      mb: { xs: 0.5, md: 1 },
+                      fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem', lg: '2.75rem' },
+                      textShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                      lineHeight: 1.2,
+                    }}
+                  >
                     {stats.completedCourses}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.95, 
+                      fontWeight: 600,
+                      fontSize: { xs: '0.85rem', md: '0.95rem' },
+                    }}
+                  >
                     {t('dashboard.stats.coursesCompleted')}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <TrendingUp color="warning" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.progress')}</Typography>
+            <Grid 
+              item 
+              xs={12} 
+              sm={6} 
+              md={3}
+              sx={{
+                animation: 'scaleIn 0.6s ease-out 0.4s both',
+              }}
+            >
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+                  color: 'white',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    opacity: 0,
+                    transition: 'opacity 0.4s ease',
+                  },
+                  '&:hover': {
+                    transform: 'translateY(-12px) scale(1.05)',
+                    boxShadow: '0 25px 50px rgba(245, 158, 11, 0.4), 0 0 60px rgba(245, 158, 11, 0.2)',
+                    '&::before': {
+                      opacity: 1,
+                    },
+                    '& .stat-icon': {
+                      transform: 'scale(1.2) rotate(5deg)',
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                    },
+                  },
+                }}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box 
+                      className="stat-icon"
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 3, 
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.4s ease',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                      }}
+                    >
+                      <TrendingUp sx={{ fontSize: 32 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="warning.main">
+                  <Typography 
+                    variant="h2" 
+                    sx={{ 
+                      fontWeight: 900, 
+                      mb: { xs: 0.5, md: 1 },
+                      fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem', lg: '2.75rem' },
+                      textShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                      lineHeight: 1.2,
+                    }}
+                  >
                     {stats.averageProgress}%
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      opacity: 0.95, 
+                      fontWeight: 600,
+                      fontSize: { xs: '0.85rem', md: '0.95rem' },
+                    }}
+                  >
                     {t('dashboard.stats.averageProgress')}
                   </Typography>
                 </CardContent>
@@ -454,16 +814,34 @@ const Dashboard = () => {
           <>
             {/* Instructor/Admin Dashboard Stats */}
             <Grid item xs={12} sm={6} md={3}>
-              <Card>
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: 'white',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 20px 40px rgba(99, 102, 241, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <School color="primary" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.courses')}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ 
+                      p: 1.5, 
+                      borderRadius: 2, 
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <School sx={{ fontSize: 28 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="primary">
+                  <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>
                     {stats.totalCourses}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
                     {t('dashboard.stats.created')}
                   </Typography>
                 </CardContent>
@@ -471,16 +849,34 @@ const Dashboard = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} md={3}>
-              <Card>
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+                  color: 'white',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 20px 40px rgba(16, 185, 129, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <People color="secondary" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.students')}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ 
+                      p: 1.5, 
+                      borderRadius: 2, 
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <People sx={{ fontSize: 28 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="secondary">
+                  <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>
                     {stats.totalStudents}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
                     {t('dashboard.stats.totalStudents')}
                   </Typography>
                 </CardContent>
@@ -488,16 +884,34 @@ const Dashboard = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} md={3}>
-              <Card>
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+                  color: 'white',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 20px 40px rgba(245, 158, 11, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <TrendingUp color="warning" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.engagement')}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ 
+                      p: 1.5, 
+                      borderRadius: 2, 
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <TrendingUp sx={{ fontSize: 28 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="warning.main">
+                  <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>
                     {stats.totalCourses > 0 ? Math.round((stats.totalStudents / stats.totalCourses) * 10) / 10 : 0}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
                     {t('dashboard.stats.avgStudentsPerCourse')}
                   </Typography>
                 </CardContent>
@@ -505,16 +919,34 @@ const Dashboard = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} md={3}>
-              <Card>
+              <Card
+                sx={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
+                  color: 'white',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 20px 40px rgba(59, 130, 246, 0.3)',
+                  },
+                }}
+              >
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Assignment color="success" sx={{ mr: 1 }} />
-                    <Typography variant="h6">{t('dashboard.stats.activities')}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ 
+                      p: 1.5, 
+                      borderRadius: 2, 
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Assignment sx={{ fontSize: 28 }} />
+                    </Box>
                   </Box>
-                  <Typography variant="h4" color="success.main">
+                  <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>
                     -
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
                     {t('dashboard.stats.totalActivities')}
                   </Typography>
                 </CardContent>
@@ -526,27 +958,120 @@ const Dashboard = () => {
         {/* Course Categories - Only for Students */}
         {user.role === 'Student' ? (
           <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+            <Card
+              sx={{
+                border: '1px solid',
+                borderColor: 'grey.200',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              }}
+            >
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Typography 
+                  variant="h5" 
+                  gutterBottom
+                  sx={{
+                    fontWeight: 700,
+                    mb: 3,
+                    fontSize: { xs: '1.25rem', md: '1.5rem' },
+                  }}
+                >
                   {t('dashboard.myCourses')}
                 </Typography>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                  <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+                <Box sx={{ borderBottom: 2, borderColor: 'divider', mb: { xs: 2, md: 3 } }}>
+                  <Tabs 
+                    value={tabValue} 
+                    onChange={(e, newValue) => setTabValue(newValue)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                    sx={{
+                      minHeight: { xs: 56, md: 56 },
+                      '& .MuiTab-root': {
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        minHeight: 56,
+                        fontSize: '0.9375rem',
+                        px: { xs: 2, sm: 2.5, md: 3 },
+                        whiteSpace: 'nowrap',
+                        '& .MuiTab-iconWrapper': {
+                          fontSize: '1.25rem',
+                          mr: 1,
+                        },
+                      },
+                      '& .MuiTabs-scrollButtons': {
+                        width: { xs: 40, md: 48 },
+                        '&.Mui-disabled': {
+                          opacity: 0.3,
+                        },
+                        '& .MuiSvgIcon-root': {
+                          fontSize: { xs: '1.5rem', md: '1.75rem' },
+                        },
+                      },
+                      '& .MuiTabs-indicator': {
+                        height: 3,
+                        borderRadius: '3px 3px 0 0',
+                      },
+                    }}
+                  >
                     <Tab 
-                      label={`${t('common.enrolled')} (${enrolledCourses.length})`} 
                       icon={<School />}
                       iconPosition="start"
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box component="span">
+                            {t('common.enrolled')}
+                          </Box>
+                          <Chip 
+                            label={enrolledCourses.length} 
+                            size="small" 
+                            sx={{ 
+                              height: 20,
+                              fontSize: '0.75rem',
+                              minWidth: 24,
+                            }}
+                          />
+                        </Box>
+                      }
                     />
                     <Tab 
-                      label={`${t('common.inProgress')} (${inProgressCourses.length})`} 
                       icon={<PlayArrow />}
                       iconPosition="start"
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box component="span">
+                            {t('common.inProgress')}
+                          </Box>
+                          <Chip 
+                            label={inProgressCourses.length} 
+                            size="small" 
+                            sx={{ 
+                              height: 20,
+                              fontSize: '0.75rem',
+                              minWidth: 24,
+                            }}
+                          />
+                        </Box>
+                      }
                     />
                     <Tab 
-                      label={`${t('common.completed')} (${completedCourses.length})`} 
                       icon={<CheckCircle />}
                       iconPosition="start"
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box component="span">
+                            {t('common.completed')}
+                          </Box>
+                          <Chip 
+                            label={completedCourses.length} 
+                            size="small" 
+                            sx={{ 
+                              height: 20,
+                              fontSize: '0.75rem',
+                              minWidth: 24,
+                            }}
+                          />
+                        </Box>
+                      }
                     />
                   </Tabs>
                 </Box>
@@ -565,60 +1090,121 @@ const Dashboard = () => {
                             {t('dashboard.noCoursesEnrolled')}
                           </Typography>
                         ) : (
-                          <List>
+                          <List sx={{ p: 0 }}>
                             {enrolledCourses.map((course, index) => (
                               <React.Fragment key={course.id || index}>
-                                <ListItem>
-                                  <ListItemAvatar>
-                                    <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                      <BookOnline />
-                                    </Avatar>
-                                  </ListItemAvatar>
-                                  <ListItemText
-                                    primary={course.title}
-                                    secondary={
-                                      <Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                          {course.instructor?.firstName && course.instructor?.lastName
-                                            ? `${course.instructor.firstName} ${course.instructor.lastName}`
-                                            : course.instructorName || 'Instructor'}
+                                <ListItem
+                                  sx={{
+                                    flexDirection: { xs: 'column', sm: 'row' },
+                                    alignItems: { xs: 'flex-start', sm: 'center' },
+                                    py: { xs: 2, md: 2.5 },
+                                    px: { xs: 1, sm: 2 },
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', gap: { xs: 1.5, sm: 2 } }}>
+                                    <ListItemAvatar sx={{ minWidth: { xs: 48, md: 56 } }}>
+                                      <Avatar sx={{ bgcolor: 'primary.main', width: { xs: 48, md: 56 }, height: { xs: 48, md: 56 } }}>
+                                        <BookOnline sx={{ fontSize: { xs: 24, md: 28 } }} />
+                                      </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText
+                                      primary={
+                                        <Typography 
+                                          variant="h6" 
+                                          sx={{ 
+                                            fontWeight: 700,
+                                            fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                                            mb: { xs: 0.5, md: 1 },
+                                            lineHeight: 1.3,
+                                          }}
+                                        >
+                                          {course.title}
                                         </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 1 }}>
-                                          {course.level && (
-                                            <Chip 
-                                              label={course.level} 
-                                              size="small" 
-                                              color="primary" 
-                                              variant="outlined"
-                                            />
-                                          )}
-                                          <Typography variant="body2" color="text.secondary">
-                                            {course.completionPercentage}% {t('common.complete')}
+                                      }
+                                      secondary={
+                                        <Box sx={{ mt: { xs: 0.5, md: 1 } }}>
+                                          <Typography 
+                                            variant="body2" 
+                                            color="text.secondary"
+                                            sx={{ 
+                                              fontSize: { xs: '0.85rem', md: '0.875rem' },
+                                              mb: { xs: 1, md: 1.5 },
+                                            }}
+                                          >
+                                            {course.instructor?.firstName && course.instructor?.lastName
+                                              ? `${course.instructor.firstName} ${course.instructor.lastName}`
+                                              : course.instructorName || 'Instructor'}
                                           </Typography>
-                                        </Box>
-                                        {course.totalMaterials > 0 && (
-                                          <Box sx={{ mt: 1 }}>
-                                            <LinearProgress 
-                                              variant="determinate" 
-                                              value={course.completionPercentage} 
-                                              sx={{ height: 6, borderRadius: 3 }}
-                                            />
+                                          <Box sx={{ 
+                                            display: 'flex', 
+                                            flexWrap: 'wrap',
+                                            alignItems: 'center', 
+                                            gap: { xs: 0.75, md: 1 },
+                                            mb: { xs: 1, md: 1.5 },
+                                          }}>
+                                            {course.level && (
+                                              <Chip 
+                                                label={course.level} 
+                                                size="small" 
+                                                color="primary" 
+                                                variant="outlined"
+                                                sx={{ 
+                                                  fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                                  height: { xs: 22, md: 24 },
+                                                }}
+                                              />
+                                            )}
+                                            <Typography 
+                                              variant="body2" 
+                                              color="text.secondary"
+                                              sx={{ 
+                                                fontSize: { xs: '0.8rem', md: '0.875rem' },
+                                                fontWeight: 600,
+                                              }}
+                                            >
+                                              {course.completionPercentage}% {t('common.complete')}
+                                            </Typography>
                                           </Box>
-                                        )}
-                                      </Box>
-                                    }
-                                  />
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                                          {course.totalMaterials > 0 && (
+                                            <Box sx={{ mt: { xs: 0.5, md: 1 } }}>
+                                              <LinearProgress 
+                                                variant="determinate" 
+                                                value={course.completionPercentage} 
+                                                sx={{ 
+                                                  height: { xs: 5, md: 6 }, 
+                                                  borderRadius: 3,
+                                                  mb: 0.5,
+                                                }}
+                                              />
+                                            </Box>
+                                          )}
+                                        </Box>
+                                      }
+                                      sx={{ flex: 1, m: 0 }}
+                                    />
+                                  </Box>
+                                  <Box sx={{ 
+                                    width: { xs: '100%', sm: 'auto' },
+                                    mt: { xs: 2, sm: 0 },
+                                    ml: { xs: 0, sm: 2 },
+                                  }}>
                                     <Button 
-                                      size="small" 
+                                      fullWidth={isMobile}
+                                      size={isMobile ? "medium" : "small"}
                                       variant="contained"
                                       onClick={() => navigate(`/course-learning/${course.id}`)}
+                                      sx={{
+                                        minHeight: { xs: 44, md: 36 },
+                                        fontSize: { xs: '0.875rem', md: '0.8125rem' },
+                                        fontWeight: 600,
+                                        borderRadius: { xs: 2, md: 1.5 },
+                                      }}
                                     >
                                       {t('dashboard.startLearning')}
                                     </Button>
                                   </Box>
                                 </ListItem>
-                                {index < enrolledCourses.length - 1 && <Divider />}
+                                {index < enrolledCourses.length - 1 && <Divider sx={{ mx: { xs: 1, sm: 2 } }} />}
                               </React.Fragment>
                             ))}
                           </List>
@@ -634,65 +1220,133 @@ const Dashboard = () => {
                             {t('dashboard.noCoursesInProgress')}
                           </Typography>
                         ) : (
-                          <List>
+                          <List sx={{ p: 0 }}>
                             {inProgressCourses.map((course, index) => (
                               <React.Fragment key={course.id || index}>
-                                <ListItem>
-                                  <ListItemAvatar>
-                                    <Avatar sx={{ bgcolor: 'info.main' }}>
-                                      <PlayArrow />
-                                    </Avatar>
-                                  </ListItemAvatar>
-                                  <ListItemText
-                                    primary={course.title}
-                                    secondary={
-                                      <Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                          {course.instructor?.firstName && course.instructor?.lastName
-                                            ? `${course.instructor.firstName} ${course.instructor.lastName}`
-                                            : course.instructorName || 'Instructor'}
+                                <ListItem
+                                  sx={{
+                                    flexDirection: { xs: 'column', sm: 'row' },
+                                    alignItems: { xs: 'flex-start', sm: 'center' },
+                                    py: { xs: 2, md: 2.5 },
+                                    px: { xs: 1, sm: 2 },
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', gap: { xs: 1.5, sm: 2 } }}>
+                                    <ListItemAvatar sx={{ minWidth: { xs: 48, md: 56 } }}>
+                                      <Avatar sx={{ bgcolor: 'info.main', width: { xs: 48, md: 56 }, height: { xs: 48, md: 56 } }}>
+                                        <PlayArrow sx={{ fontSize: { xs: 24, md: 28 } }} />
+                                      </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText
+                                      primary={
+                                        <Typography 
+                                          variant="h6" 
+                                          sx={{ 
+                                            fontWeight: 700,
+                                            fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                                            mb: { xs: 0.5, md: 1 },
+                                            lineHeight: 1.3,
+                                          }}
+                                        >
+                                          {course.title}
                                         </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 1 }}>
-                                          {course.level && (
-                                            <Chip 
-                                              label={course.level} 
-                                              size="small" 
-                                              color="info" 
-                                              variant="outlined"
-                                            />
-                                          )}
-                                          <Typography variant="body2" color="info.main" fontWeight="bold">
-                                            {course.completionPercentage}% {t('common.complete')}
+                                      }
+                                      secondary={
+                                        <Box sx={{ mt: { xs: 0.5, md: 1 } }}>
+                                          <Typography 
+                                            variant="body2" 
+                                            color="text.secondary"
+                                            sx={{ 
+                                              fontSize: { xs: '0.85rem', md: '0.875rem' },
+                                              mb: { xs: 1, md: 1.5 },
+                                            }}
+                                          >
+                                            {course.instructor?.firstName && course.instructor?.lastName
+                                              ? `${course.instructor.firstName} ${course.instructor.lastName}`
+                                              : course.instructorName || 'Instructor'}
                                           </Typography>
-                                        </Box>
-                                        {course.totalMaterials > 0 && (
-                                          <Box sx={{ mt: 1 }}>
-                                            <LinearProgress 
-                                              variant="determinate" 
-                                              value={course.completionPercentage} 
-                                              color="info"
-                                              sx={{ height: 6, borderRadius: 3 }}
-                                            />
-                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                                              {course.completedMaterialsCount} {t('dashboard.of')} {course.totalMaterials} {t('dashboard.materialsCompleted')}
+                                          <Box sx={{ 
+                                            display: 'flex', 
+                                            flexWrap: 'wrap',
+                                            alignItems: 'center', 
+                                            gap: { xs: 0.75, md: 1 },
+                                            mb: { xs: 1, md: 1.5 },
+                                          }}>
+                                            {course.level && (
+                                              <Chip 
+                                                label={course.level} 
+                                                size="small" 
+                                                color="info" 
+                                                variant="outlined"
+                                                sx={{ 
+                                                  fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                                  height: { xs: 22, md: 24 },
+                                                }}
+                                              />
+                                            )}
+                                            <Typography 
+                                              variant="body2" 
+                                              color="info.main" 
+                                              fontWeight="bold"
+                                              sx={{ 
+                                                fontSize: { xs: '0.8rem', md: '0.875rem' },
+                                              }}
+                                            >
+                                              {course.completionPercentage}% {t('common.complete')}
                                             </Typography>
                                           </Box>
-                                        )}
-                                      </Box>
-                                    }
-                                  />
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                                          {course.totalMaterials > 0 && (
+                                            <Box sx={{ mt: { xs: 0.5, md: 1 } }}>
+                                              <LinearProgress 
+                                                variant="determinate" 
+                                                value={course.completionPercentage} 
+                                                color="info"
+                                                sx={{ 
+                                                  height: { xs: 5, md: 6 }, 
+                                                  borderRadius: 3,
+                                                  mb: 0.5,
+                                                }}
+                                              />
+                                              <Typography 
+                                                variant="caption" 
+                                                color="text.secondary" 
+                                                sx={{ 
+                                                  mt: 0.5,
+                                                  fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                                }}
+                                              >
+                                                {course.completedMaterialsCount} {t('dashboard.of')} {course.totalMaterials} {t('dashboard.materialsCompleted')}
+                                              </Typography>
+                                            </Box>
+                                          )}
+                                        </Box>
+                                      }
+                                      sx={{ flex: 1, m: 0 }}
+                                    />
+                                  </Box>
+                                  <Box sx={{ 
+                                    width: { xs: '100%', sm: 'auto' },
+                                    mt: { xs: 2, sm: 0 },
+                                    ml: { xs: 0, sm: 2 },
+                                  }}>
                                     <Button 
-                                      size="small" 
+                                      fullWidth={isMobile}
+                                      size={isMobile ? "medium" : "small"}
                                       variant="contained"
                                       color="info"
                                       onClick={() => navigate(`/course-learning/${course.id}`)}
+                                      sx={{
+                                        minHeight: { xs: 44, md: 36 },
+                                        fontSize: { xs: '0.875rem', md: '0.8125rem' },
+                                        fontWeight: 600,
+                                        borderRadius: { xs: 2, md: 1.5 },
+                                      }}
                                     >
                                       {t('dashboard.continueLearning')}
                                     </Button>
                                   </Box>
                                 </ListItem>
-                                {index < inProgressCourses.length - 1 && <Divider />}
+                                {index < inProgressCourses.length - 1 && <Divider sx={{ mx: { xs: 1, sm: 2 } }} />}
                               </React.Fragment>
                             ))}
                           </List>
@@ -708,71 +1362,144 @@ const Dashboard = () => {
                             {t('dashboard.noCompletedCourses')}
                           </Typography>
                         ) : (
-                          <List>
+                          <List sx={{ p: 0 }}>
                             {completedCourses.map((course, index) => (
                               <React.Fragment key={course.id || index}>
-                                <ListItem>
-                                  <ListItemAvatar>
-                                    <Avatar sx={{ bgcolor: 'success.main' }}>
-                                      <WorkspacePremium />
-                                    </Avatar>
-                                  </ListItemAvatar>
-                                  <ListItemText
-                                    primary={course.title}
-                                    secondary={
-                                      <Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                          {course.instructor?.firstName && course.instructor?.lastName
-                                            ? `${course.instructor.firstName} ${course.instructor.lastName}`
-                                            : course.instructorName || 'Instructor'}
+                                <ListItem
+                                  sx={{
+                                    flexDirection: { xs: 'column', sm: 'row' },
+                                    alignItems: { xs: 'flex-start', sm: 'center' },
+                                    py: { xs: 2, md: 2.5 },
+                                    px: { xs: 1, sm: 2 },
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', width: '100%', alignItems: 'flex-start', gap: { xs: 1.5, sm: 2 } }}>
+                                    <ListItemAvatar sx={{ minWidth: { xs: 48, md: 56 } }}>
+                                      <Avatar sx={{ bgcolor: 'success.main', width: { xs: 48, md: 56 }, height: { xs: 48, md: 56 } }}>
+                                        <WorkspacePremium sx={{ fontSize: { xs: 24, md: 28 } }} />
+                                      </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText
+                                      primary={
+                                        <Typography 
+                                          variant="h6" 
+                                          sx={{ 
+                                            fontWeight: 700,
+                                            fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                                            mb: { xs: 0.5, md: 1 },
+                                            lineHeight: 1.3,
+                                          }}
+                                        >
+                                          {course.title}
                                         </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 1 }}>
-                                          {course.level && (
-                                            <Chip 
-                                              label={course.level} 
-                                              size="small" 
-                                              color="success" 
-                                              variant="outlined"
-                                            />
-                                          )}
-                                          <Chip 
-                                            icon={<WorkspacePremium />}
-                                            label={t('dashboard.certificateEarned')} 
-                                            size="small" 
-                                            color="success"
-                                          />
-                                          <Typography variant="body2" color="success.main" fontWeight="bold">
-                                            100% {t('common.complete')}
+                                      }
+                                      secondary={
+                                        <Box sx={{ mt: { xs: 0.5, md: 1 } }}>
+                                          <Typography 
+                                            variant="body2" 
+                                            color="text.secondary"
+                                            sx={{ 
+                                              fontSize: { xs: '0.85rem', md: '0.875rem' },
+                                              mb: { xs: 1, md: 1.5 },
+                                            }}
+                                          >
+                                            {course.instructor?.firstName && course.instructor?.lastName
+                                              ? `${course.instructor.firstName} ${course.instructor.lastName}`
+                                              : course.instructorName || 'Instructor'}
                                           </Typography>
-                                        </Box>
-                                        {course.totalMaterials > 0 && (
-                                          <Box sx={{ mt: 1 }}>
-                                            <LinearProgress 
-                                              variant="determinate" 
-                                              value={100} 
+                                          <Box sx={{ 
+                                            display: 'flex', 
+                                            flexWrap: 'wrap',
+                                            alignItems: 'center', 
+                                            gap: { xs: 0.75, md: 1 },
+                                            mb: { xs: 1, md: 1.5 },
+                                          }}>
+                                            {course.level && (
+                                              <Chip 
+                                                label={course.level} 
+                                                size="small" 
+                                                color="success" 
+                                                variant="outlined"
+                                                sx={{ 
+                                                  fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                                  height: { xs: 22, md: 24 },
+                                                }}
+                                              />
+                                            )}
+                                            <Chip 
+                                              icon={<WorkspacePremium sx={{ fontSize: { xs: 14, md: 16 } }} />}
+                                              label={t('dashboard.certificateEarned')} 
+                                              size="small" 
                                               color="success"
-                                              sx={{ height: 6, borderRadius: 3 }}
+                                              sx={{ 
+                                                fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                                height: { xs: 22, md: 24 },
+                                              }}
                                             />
-                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                                              {t('dashboard.all')} {course.totalMaterials} {t('dashboard.materialsCompleted')}
+                                            <Typography 
+                                              variant="body2" 
+                                              color="success.main" 
+                                              fontWeight="bold"
+                                              sx={{ 
+                                                fontSize: { xs: '0.8rem', md: '0.875rem' },
+                                              }}
+                                            >
+                                              100% {t('common.complete')}
                                             </Typography>
                                           </Box>
-                                        )}
-                                      </Box>
-                                    }
-                                  />
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                                          {course.totalMaterials > 0 && (
+                                            <Box sx={{ mt: { xs: 0.5, md: 1 } }}>
+                                              <LinearProgress 
+                                                variant="determinate" 
+                                                value={100} 
+                                                color="success"
+                                                sx={{ 
+                                                  height: { xs: 5, md: 6 }, 
+                                                  borderRadius: 3,
+                                                  mb: 0.5,
+                                                }}
+                                              />
+                                              <Typography 
+                                                variant="caption" 
+                                                color="text.secondary" 
+                                                sx={{ 
+                                                  mt: 0.5,
+                                                  fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                                }}
+                                              >
+                                                {t('dashboard.all')} {course.totalMaterials} {t('dashboard.materialsCompleted')}
+                                              </Typography>
+                                            </Box>
+                                          )}
+                                        </Box>
+                                      }
+                                      sx={{ flex: 1, m: 0 }}
+                                    />
+                                  </Box>
+                                  <Box sx={{ 
+                                    width: { xs: '100%', sm: 'auto' },
+                                    mt: { xs: 2, sm: 0 },
+                                    ml: { xs: 0, sm: 2 },
+                                  }}>
                                     <Button 
-                                      size="small" 
+                                      fullWidth={isMobile}
+                                      size={isMobile ? "medium" : "small"}
                                       variant="contained"
                                       color="success"
+                                      startIcon={<WorkspacePremium sx={{ fontSize: { xs: 18, md: 20 } }} />}
                                       onClick={() => navigate(`/course-learning/${course.id}`)}
+                                      sx={{
+                                        minHeight: { xs: 44, md: 36 },
+                                        fontSize: { xs: '0.875rem', md: '0.8125rem' },
+                                        fontWeight: 600,
+                                        borderRadius: { xs: 2, md: 1.5 },
+                                      }}
                                     >
                                       {t('dashboard.viewCertificate')}
                                     </Button>
                                   </Box>
                                 </ListItem>
-                                {index < completedCourses.length - 1 && <Divider />}
+                                {index < completedCourses.length - 1 && <Divider sx={{ mx: { xs: 1, sm: 2 } }} />}
                               </React.Fragment>
                             ))}
                           </List>
@@ -867,7 +1594,8 @@ const Dashboard = () => {
           </Grid>
         )}
       </Grid>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

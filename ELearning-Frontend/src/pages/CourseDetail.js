@@ -37,6 +37,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { getTranslation } from '../utils/translations';
 import axios from 'axios';
 
@@ -45,6 +46,7 @@ const CourseDetail = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { language } = useLanguage();
+  const { showSuccess, showError, showWarning } = useNotification();
 
   const t = (key) => getTranslation(language, key);
   const [course, setCourse] = useState(null);
@@ -155,20 +157,24 @@ const CourseDetail = () => {
       setEnrolled(true);
       // Refresh enrollment status to ensure consistency
       await checkEnrollment();
+      showSuccess(t('courseDetail.enrollSuccess') || 'Successfully enrolled in course!', { 
+        title: t('courseDetail.enrollmentSuccess') || 'Enrollment Successful' 
+      });
     } catch (error) {
       console.error('Error enrolling:', error);
       // Handle 401 errors (token expired or invalid)
       if (error.response?.status === 401) {
         logout();
-        alert(t('courseDetail.sessionExpired'));
+        showWarning(t('courseDetail.sessionExpired'), { title: 'Session Expired' });
         navigate('/login');
         return;
       }
       // Show error message to user
       if (error.response?.status === 409) {
         setEnrolled(true);
+        showWarning(t('courseDetail.alreadyEnrolled') || 'You are already enrolled in this course.');
       } else {
-        alert(t('courseDetail.enrollFailed'));
+        showError(t('courseDetail.enrollFailed'), { title: t('courseDetail.enrollmentFailed') || 'Enrollment Failed' });
       }
     } finally {
       setEnrollmentLoading(false);
