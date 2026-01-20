@@ -53,6 +53,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getTranslation } from '../utils/translations';
 import axios from 'axios';
+import ChatWidget from '../components/ChatWidget';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -1211,6 +1212,9 @@ const Home = () => {
           </Box>
         </Container>
       </Box>
+
+      {/* Chat Widget */}
+      <ChatWidget />
     </Box>
   );
 };

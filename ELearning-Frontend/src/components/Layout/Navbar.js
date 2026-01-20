@@ -12,7 +12,8 @@ import {
   useTheme,
   useMediaQuery,
   Select,
-  FormControl
+  FormControl,
+  Container
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -105,6 +106,8 @@ const Navbar = () => {
         backdropFilter: 'blur(20px)',
         position: 'relative',
         overflow: 'hidden',
+        borderRadius: 0,
+        width: '100%',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -119,19 +122,20 @@ const Navbar = () => {
       }}
     >
       <Toolbar sx={{ py: 1.5, position: 'relative', zIndex: 1 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              transform: 'scale(1.05)',
-            },
-          }}
-          onClick={() => navigate('/')}
-        >
+        <Container maxWidth="xl" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1.05)',
+              },
+            }}
+            onClick={() => navigate('/')}
+          >
           <Box
             sx={{
               width: 48,
@@ -742,6 +746,7 @@ const Navbar = () => {
             </Box>
           </Drawer>
         </Box>
+        </Container>
       </Toolbar>
     </AppBar>
   );

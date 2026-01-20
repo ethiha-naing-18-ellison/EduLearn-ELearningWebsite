@@ -24,6 +24,10 @@ namespace ELearning.API.Data
         public DbSet<Progress> Progress { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
         public DbSet<MaterialCompletion> MaterialCompletions { get; set; }
+        public DbSet<FAQCategory> FAQCategories { get; set; }
+        public DbSet<FAQ> FAQs { get; set; }
+        public DbSet<ChatConversation> ChatConversations { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -260,6 +264,55 @@ namespace ELearning.API.Data
                       .OnDelete(DeleteBehavior.Cascade);
                 // Unique constraint: one completion record per user per material
                 entity.HasIndex(e => new { e.UserId, e.CourseId, e.MaterialType, e.MaterialId }).IsUnique();
+            });
+
+            // FAQCategory configuration
+            modelBuilder.Entity<FAQCategory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Icon).HasMaxLength(255);
+            });
+
+            // FAQ configuration
+            modelBuilder.Entity<FAQ>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Question).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Answer).IsRequired();
+                entity.Property(e => e.Keywords).HasMaxLength(500);
+                entity.HasOne(e => e.Category)
+                      .WithMany(c => c.FAQs)
+                      .HasForeignKey(e => e.CategoryId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ChatConversation configuration
+            modelBuilder.Entity<ChatConversation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.SessionId).IsRequired().HasMaxLength(255);
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.SetNull);
+                entity.HasIndex(e => e.SessionId);
+            });
+
+            // ChatMessage configuration
+            modelBuilder.Entity<ChatMessage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Message).IsRequired();
+                entity.HasOne(e => e.Conversation)
+                      .WithMany(c => c.Messages)
+                      .HasForeignKey(e => e.ConversationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.FAQ)
+                      .WithMany(f => f.ChatMessages)
+                      .HasForeignKey(e => e.FAQId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
         }
     }
